@@ -26,8 +26,14 @@ class BookingResource:
     def get_user_bookings(self, user_id: str):
         bookings = self.collection.find({USER_ID: user_id})
         return serialize_items(list(bookings))
+    
+    def get_class_bookings(self, class_id: str):
+        bookings = self.collection.find({CLASS_ID: class_id})
+        return serialize_items(list(bookings))
 
     def get_booking(self, user_id: str, class_id: str):
         booking = self.collection.find_one({USER_ID: user_id, CLASS_ID: class_id})
         return serialize_item(booking)
+    
+
 
