@@ -87,7 +87,8 @@ class ClassList(Resource):
     ),
   )
   def post(self):
-    assert isinstance(request.json, dict)
+    if request.json is None or not isinstance(request.json, dict):
+      return {MSG: "Requets body must be JSON"}, HTTPStatus.NOT_ACCEPTABLE
 
     #authorize only trainer/admin roles
     user_id = get_jwt_identity()
@@ -103,21 +104,25 @@ class ClassList(Resource):
     capacity_value = request.json.get(capacity)
     trainer_name_value = request.json.get(trainer_name)
     #Check for value types and make sure all values are non-empty
-    if not(
-      isinstance(class_name_value, str) and len(class_name_value)>0 and
-      isinstance(start_time_value, str) and len(start_time_value)>0 and
-      isinstance(end_time_value, str) and len(end_time_value)>0 and
-      isinstance(location_value, str) and len(location_value)>0 and
-      isinstance(trainer_name_value, str) and len(trainer_name_value)>0 and
-      isinstance(capacity_value, int) and capacity_value>0
-    ):
-      return {MSG:"Invalid value given at one of fields"}, HTTPStatus.NOT_ACCEPTABLE
+    if not isinstance(class_name_value, str) or len(class_name_value.strip())==0:
+      return {MSG: "Class name is required"}, HTTPStatus.NOT_ACCEPTABLE
+    if not isinstance(start_time_value, str) or len(start_time_value.strip())==0:
+      return {MSG: "Start time is required"}, HTTPStatus.NOT_ACCEPTABLE
+    if not isinstance(end_time_value, str) or len(end_time_value.strip())==0:
+      return {MSG: "End time is required"}, HTTPStatus.NOT_ACCEPTABLE
+    if not isinstance(location_value, str) or len(location_value.strip())==0:
+      return {MSG: "Location is required"}, HTTPStatus.NOT_ACCEPTABLE
+    if not isinstance(trainer_name_value, str) or len(trainer_name_value.strip())==0:
+      return {MSG: "Trainer name is required"}, HTTPStatus.NOT_ACCEPTABLE
+    if not isinstance(capacity_value, int) or capacity_value<=0:
+      return {MSG: "Capacity is required"}, HTTPStatus.NOT_ACCEPTABLE
+    
     #parse start and end time as datetime objects
     try:
       start_datetime = datetime.fromisoformat(start_time_value)
       end_datetime = datetime.fromisoformat(end_time_value)
     except Exception:
-      return {MSG: "Invalid value given at one of fields"}, HTTPStatus.NOT_ACCEPTABLE
+      return {MSG: "Start time and end time must be in the format YYYY-MM-DDTHH:MM:SS (e.g. 2026-03-02T08:30:00)"}, HTTPStatus.NOT_ACCEPTABLE
     #classes can be booked only within upcoming 2 weeks
     now = datetime.now() #current local time
     latest_allowed = now+timedelta(days=14) #latest start date permitted

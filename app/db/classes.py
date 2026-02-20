@@ -61,8 +61,8 @@ class ClassResource:
       obj_id = ObjectId(class_id)
     except Exception:
         return None
-    class = self.collection.find_one({"_id": obj_id})
-    return serialize_item(class)
+    class_ = self.collection.find_one({"_id": obj_id})
+    return serialize_item(class_)
 
 
   def decrement_remaining_spots(self, class_id: str): #decrement remaining spots of a class when a member books it
