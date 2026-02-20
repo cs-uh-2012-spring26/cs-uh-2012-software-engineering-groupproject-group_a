@@ -1,6 +1,9 @@
-# Students Records API
+# Fitness Class Management and Booking System
 
-This repo provides a template for setting up a flask rest API server. As a starting point, it shows an example of a simple hello world endpoint as well as endpoints that offer interactions with student records.
+This repo is a web application for managing gym class schedules, bookings, and trainer–member interactions. It provides role-based access for members, trainers, and admins, with JWT-based authentication and a RESTful API backend.
+
+## Background
+This system built around the idea of making it simple for gyms to publish class schedules and for members to discover, book, and manage their classes online.
 
 ## Prerequisites
 
@@ -82,6 +85,7 @@ To deactivate the virtual environment:
 deactivate
 ```
 
-## Best Practices
-
-See [/docs/BestPractices.md](/docs/BestPractices.md) for advice regarding branch naming and other useful tips.
+## Maintainers
+Isumi Wanniarachchi @isumisw
+Nada Kaluderovic @nadja2506
+Rujul Malhotra @rujulm
