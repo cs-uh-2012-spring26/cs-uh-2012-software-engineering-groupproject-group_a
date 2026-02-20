@@ -129,9 +129,24 @@ class ClassList(Resource):
     latest_allowed = now+timedelta(days=14) #latest start date permitted
     if start_datetime<now or start_datetime>latest_allowed:
       return {MSG: "Classes can only be created for upcoming 2 weeks"}, HTTPStatus.NOT_ACCEPTABLE
-    #end time must be before start time; class cannot start and end at same time
+    #end time must be after start time; class cannot start and end at same time
     if end_datetime<=start_datetime:
       return {MSG:"End time must be after start time"}, HTTPStatus.NOT_ACCEPTABLE
+    
+    #Prevent class overlap: two classes at same time at same location
+    existing_classes = ClassResource().get_upcoming_classes()
+    for c in existing_classes:
+      if c.get(location)!=location_value:
+        continue
+      try:
+        existing_start = datetime.fromisoformat(c.get(start_time))
+        existing_end = datetime.fromisoformat(c.get(end_time))
+      except Exception:
+         continue
+      if existing_start< end_datetime and start_datetime<existing_end:
+         return {MSG: "Another class is already scheduled at this location during that time"}, HTTPStatus.NOT_ACCEPTABLE
+        
+
     class_resource = ClassResource()
     class_id = class_resource.create_class(class_name_value, start_time_value, end_time_value, location_value, capacity_value, trainer_name_value)
     return {MSG: f"Class created with id {class_id}"}, HTTPStatus.OK
