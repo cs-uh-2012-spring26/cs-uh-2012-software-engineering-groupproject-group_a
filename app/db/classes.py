@@ -49,7 +49,7 @@ class ClassResource:
         continue
       try:
         class_start_datetime = datetime.fromisoformat(start_time_value)
-      except Exception:
+      except ValueError:
         continue #skip class if there is invalid date format, again checked for during class cretaion step
       #include only classes in upcoming 2 weeks
       if now<=class_start_datetime<=latest_allowed:
