@@ -44,9 +44,60 @@ This clarification directly impacted our backend design by requiring authenticat
 ### Use Case Specifications
 
 ### Feature 1: Create Class
+**Use Case:** Create Class <br>
+
+**Primary Actor:** Trainer, Admin <br>
+
+**Preconditions:** 
+-   User is registered and authenticated as trainer/admin.
+
+**Main Success Scenario:**
+1. Trainer/Admin logs into the system.  
+2. Trainer/Admin proceeds to the Create Class page.  
+3. System displays a form requesting class details (class name, start time, end time, location, capacity, trainer’s name).  
+4. Trainer/Admin enters the class details.  
+5. System validates important information:  
+   - Start time is before end time.  
+   - Class date falls within the upcoming two weeks.  
+   - Capacity is a positive number.  
+6. Trainer/Admin submits the form.  
+7. System creates the class and stores it.  
+8. System confirms successful creation of the class.   
+
+**Extensions:**
+- 5a. If the class is scheduled outside the upcoming two weeks, the system returns an error indicating “Classes can only be created for the upcoming two weeks.”  
+- 5b. If the end time is earlier than or equal to the start time, the system returns an error indicating “End time must be after start time.”  
+- 6a. If one or more required fields (start time, end time, location, capacity, trainer’s name) are missing, the system returns a validation error and states the missing fields.  
+- 6b. If the capacity is zero, negative or not a number, the system returns an error indicating “Capacity must be a positive number.”  
+- 7a. If a system or database error occurs, the system returns an error indicating that the class could not be created.  
+
+**Success guarantee:**
+- A new class exists in the system with the provided details.
+
 
 ### Feature 2: View Class List
 
+**Use Case:** View Class List <br>
+
+**Primary Actor:** Guest/Member, Trainer, Admin <br>
+
+**Preconditions:** 
+- No additional preconditions. 
+
+**Main Success Scenario:**
+1. Actor opens the Class List page.  
+2. System retrieves all classes scheduled within the upcoming two weeks.  
+3. System displays the list of upcoming classes to the actor by week.  
+4. For each class, the system displays the following details: class_name, start time, end time, location, trainer name, capacity and remaining spots.  
+5. In case the class is full, it will still be displayed as part of View Class List function and the capacity will be assigned value of 0.
+6. Actor views the class list.  
+
+**Extensions:**
+- 2a. If there are no upcoming classes within the next two weeks, the system displays a message indicating “No upcoming classes available.”  
+- 3a. If a system or database error occurs while retrieving classes, the system returns an error indicating that the class list could not be loaded.  
+
+**Success guarantee:**
+- The system returns the list of upcoming classes scheduled within the next two weeks, including classes that are fully booked with remaining spots shown as 0.
 ### Feature 3: Book a Class
 
 **Use Case:** Book a Class <br>
