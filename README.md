@@ -3,13 +3,14 @@
 This repo is a web application for managing gym class schedules, bookings, and trainer–member interactions. It provides role-based access for members, trainers, and admins, with JWT-based authentication and a RESTful API backend.
 
 ## Background
-This system built around the idea of making it simple for gyms to publish class schedules and for members to discover, book, and manage their classes online.
+This system built around the idea of making it simple for gyms to publish class schedules and for members to discover, book, and manage their classes online. 
 
 ## Prerequisites
 
 - python 3.10 or higher
 - MongoDB installed. Follow [https://www.mongodb.com/docs/manual/installation/](https://www.mongodb.com/docs/manual/installation/)
 to install MongoDB locally. Select the right link for your operating system.
+- Make sure the MongoDB service is running locally before starting the backend server.
 
 ## Tech Stack
 
