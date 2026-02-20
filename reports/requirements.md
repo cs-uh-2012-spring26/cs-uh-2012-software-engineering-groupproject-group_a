@@ -98,6 +98,7 @@ This clarification directly impacted our backend design by requiring authenticat
 
 **Success guarantee:**
 - The system returns the list of upcoming classes scheduled within the next two weeks, including classes that are fully booked with remaining spots shown as 0.
+
 ### Feature 3: Book a Class
 
 **Use Case:** Book a Class <br>

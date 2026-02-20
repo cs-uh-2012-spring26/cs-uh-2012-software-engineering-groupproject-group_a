@@ -2,7 +2,8 @@ from flask_restx import Namespace, Resource, fields
 from app.apis import MSG
 from app.db.classes import ClassResource
 from app.db.classes import class_name, start_time, end_time, location, capacity, remaining_spots, trainer_name
-from app.db.users import UserResource, ROLE
+from app.db.users import UserResource, ROLE, USERNAME, EMAIL, PHONE
+from app.db.bookings import BookingResource, USER_ID
 from http import HTTPStatus
 from flask import request
 from datetime import datetime, timedelta
@@ -134,3 +135,85 @@ class ClassList(Resource):
     class_resource = ClassResource()
     class_id = class_resource.create_class(class_name_value, start_time_value, end_time_value, location_value, capacity_value, trainer_name_value)
     return {MSG: f"Class created with id {class_id}"}, HTTPStatus.OK
+
+
+@api.route("/<string:class_id>/members")
+class ClassMembers(Resource):
+  @jwt_required()
+  @api.response(
+      HTTPStatus.OK,
+      "Success",
+      api.model(
+          "ClassMembersResponse",
+          {
+              MSG: fields.List(
+                  fields.Nested(
+                      api.model(
+                          "MemberItem",
+                          {
+                              "name": fields.String,
+                              "email": fields.String,
+                              "phone": fields.String,
+                          },
+                      )
+                  )
+              )
+          },
+      ),
+  )
+  @api.response(
+      HTTPStatus.FORBIDDEN,
+      "Forbidden",
+      api.model(
+          "ClassMembersForbidden",
+          {MSG: fields.String(example="Only trainers or admins can view class members")},
+      ),
+  )
+  @api.response(
+      HTTPStatus.NOT_FOUND,
+      "Class not found",
+      api.model("ClassMembersNotFound", {MSG: fields.String(example="Class not found")}),
+  )
+  def get(self, class_id: str):
+      # authorize trainer
+      user_id = get_jwt_identity()
+      user_res = UserResource()
+      user = user_res.get_user_by_id(user_id)
+
+      if user is None or user.get(ROLE) not in ("trainer", "admin"):
+          return {MSG: "Only trainers or admins can view class members"}, HTTPStatus.FORBIDDEN
+
+      # ensure class exists
+      class_res = ClassResource()
+      cls = class_res.get_class_by_id(class_id)
+      if cls is None:
+          return {MSG: "Class not found"}, HTTPStatus.NOT_FOUND
+
+      # get bookings for the class
+      booking_res = BookingResource()
+      bookings = booking_res.get_class_bookings(class_id)
+
+      # loop bookings to fetch user records
+      result = []
+      seen = set()
+
+      for booking in bookings:
+          member_id = booking.get(USER_ID)
+          if not isinstance(member_id, str):
+              continue
+
+          if member_id in seen:
+              continue
+          seen.add(member_id)
+
+          member = user_res.get_user_by_id(member_id)
+          if member is None:
+              continue
+
+          result.append({
+              "name": member.get(USERNAME),
+              "email": member.get(EMAIL),
+              "phone": member.get(PHONE),
+          })
+
+      return {MSG: result}, HTTPStatus.OK
