@@ -86,6 +86,8 @@ deactivate
 ```
 
 ## Maintainers
-Isumi Wanniarachchi @isumisw
+Isumi Wanniarachchi @isumisw 
+\
 Nada Kaluderovic @nadja2506
+\
 Rujul Malhotra @rujulm
