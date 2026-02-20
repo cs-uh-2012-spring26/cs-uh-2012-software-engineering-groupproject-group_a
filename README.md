@@ -54,12 +54,6 @@ your `.env` file
 
 You can use `ctrl-c` to stop the server.
 
-### Testing the API server
-
-Run `make tests` to execute the test suite and see the coverage report
-in your terminal. You can also see a visual report by viewing
-[/htmlcov/index.html](/htmlcov/index.html) in your browser.
-
 ### Manually activating and deactivating the virtual environment
 
 Manually activating and deactivating the virtual environment is useful for
@@ -85,6 +79,39 @@ To deactivate the virtual environment:
 ```sh
 deactivate
 ```
+
+## Authentication & Testing Protected Endpoints
+
+This API uses JWT-based authentication to protect certain endpoints.
+
+### Pre-seeded Trainer Account
+
+A trainer account is automatically created when the application starts.
+
+**Trainer Credentials:**
+
+- Username: `trainer1`
+- Password: `password123`
+
+---
+
+## How to Test Trainer-Only Endpoints in Swagger
+
+- Start the server following the instructions above.
+- Open Swagger UI in your browser.
+- Navigate to `POST /auth/login`.
+- Login using: 
+{
+  "username": "trainer1",
+  "password": "password123"
+}
+5. Copy the access_token from the response.
+6. Click the Authorize button in Swagger.
+7. Paste the token in the following format:
+`Bearer <your_access_token>`
+8. You can now access protected endpoints such as:
+- `POST /classes/` (Create Class – trainer only)
+- `GET /classes/{class_id}/members` (View Class Members – trainer only)
 
 ## Maintainers
 Isumi Wanniarachchi @isumisw 
