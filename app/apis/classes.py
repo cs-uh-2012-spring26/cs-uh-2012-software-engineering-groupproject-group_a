@@ -2,9 +2,11 @@ from flask_restx import Namespace, Resource, fields
 from app.apis import MSG
 from app.db.classes import ClassResource
 from app.db.classes import class_name, start_time, end_time, location, capacity, remaining_spots, trainer_name
+from app.db.users import UserResource, ROLE
 from http import HTTPStatus
 from flask import request
 from datetime import datetime, timedelta
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 api = Namespace("classes", description="Endpoint for creating fitness classes")
 #Example class
@@ -58,6 +60,7 @@ class ClassList(Resource):
     return {MSG: upcoming_classes}, HTTPStatus.OK
   
   #Creates a new fitness class, endpoint used by trainers and admins, validates inputs and applies upcoming 2 weeks rule
+  @jwt_required()
   @api.expect(class_create_fields)
   @api.response(
     HTTPStatus.OK,
@@ -75,8 +78,23 @@ class ClassList(Resource):
       {MSG: fields.String("Invalid value given for one of the fields")},
     ),
   )
+  @api.response(
+    HTTPStatus.FORBIDDEN,
+    "Forbidden",
+    api.model(
+      "Create Class: Forbidden",
+      {MSG: fields.String("Only trainers or admins can create classes")},
+    ),
+  )
   def post(self):
     assert isinstance(request.json, dict)
+
+    #authorize only trainer/admin roles
+    user_id = get_jwt_identity()
+    user_res = UserResource()
+    user = user_res.get_user_by_id(user_id)
+    if user is None or user.get(ROLE) not in ("trainer", "admin"):
+      return {MSG: "Only trainers or admins can create classes"}, HTTPStatus.FORBIDDEN
 
     class_name_value = request.json.get(class_name)
     start_time_value = request.json.get(start_time)
