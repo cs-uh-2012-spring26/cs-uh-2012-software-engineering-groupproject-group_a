@@ -2,6 +2,8 @@ from app.apis.hello import api as hello_ns
 from app.apis.classes import api as classes_ns
 from app.apis.auth import api as auth_ns
 from app.apis.bookings import api as bookings_ns
+from werkzeug.security import generate_password_hash
+from app.db.users import UserResource
 from app.config import Config
 from app.db import DB
 
@@ -16,13 +18,34 @@ def create_app():
     app.config.from_object(Config)
 
     DB.init_app(app)
+
+    user_res = UserResource()
+    if not user_res.get_user_by_username("trainer1"):
+        user_res.create_user(
+            "trainer1",
+            "trainer1@test.com",
+            generate_password_hash("password123"),
+            "+971500000999",
+            role="trainer",
+        )
     
     jwt = JWTManager(app)
+
+    authorizations = {
+        "Bearer": {
+            "type": "apiKey",
+            "in": "header",
+            "name": "Authorization",
+            "description": "Format: Bearer <access_token>"
+        }
+    }
 
     api = Api(
         title="Fitness Class API",
         version="1.0",
         description="Backend API for fitness class management",
+        authorizations=authorizations,
+        security="Bearer",
     )
 
     api.init_app(app)
