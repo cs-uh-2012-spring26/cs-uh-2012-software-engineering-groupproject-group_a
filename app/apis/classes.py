@@ -48,17 +48,17 @@ class ClassList(Resource):
       HTTPStatus.OK,
       "Success",
       api.model(
-        "Upcoming classes",
-        {MSG: fields.List(fields.Nested(class_list_fields))}
+        "Upcoming classes grouped by week",
+        {MSG: fields.Raw(description="Dictionary which has ISO week as a key and list of classes as value")}
       ),
   )
   def get(self):
     class_resource = ClassResource()
-    upcoming_classes = class_resource.get_upcoming_classes()
+    weekly_classes = class_resource.get_upcoming_classes_grouped_by_week()
     #If there are no upcoming classes return a message
-    if len(upcoming_classes) == 0:
+    if len(weekly_classes) == 0:
       return {MSG: "No upcoming classes available"}, HTTPStatus.OK
-    return {MSG: upcoming_classes}, HTTPStatus.OK
+    return {MSG: weekly_classes}, HTTPStatus.OK
   
   #Creates a new fitness class, endpoint used by trainers and admins, validates inputs and applies upcoming 2 weeks rule
   @jwt_required()

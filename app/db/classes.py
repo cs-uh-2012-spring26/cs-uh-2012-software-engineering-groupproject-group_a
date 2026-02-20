@@ -33,7 +33,7 @@ class ClassResource:
     new_class_id = insert_result.inserted_id
     return str(new_class_id)
 
-  def get_upcoming_classes(self):
+  def get_upcoming_classes_grouped_by_week(self):
     #get all classes from database
     classes = self.collection.find({})
     classes_list = serialize_items(list(classes))
@@ -41,20 +41,24 @@ class ClassResource:
     now = datetime.now()
     latest_allowed = now+ timedelta(days=14) #show classes within next 2 weeks
 
-    upcoming_classes =[]
+    weekly_classes = {}
     for one_class in classes_list:
       start_time_value = one_class.get(start_time) #read start time of each class
-      #skip if start time is missing or invalid
+      #skip if start time is missing or invalid; inputs are already checked at class creation step and this is just a safety measure to ensure that entire system doesn't fail
       if not isinstance(start_time_value, str):
         continue
       try:
         class_start_datetime = datetime.fromisoformat(start_time_value)
-      except Exception:
-        continue #skip class if there is invalid date format
+      except ValueError:
+        continue #skip class if there is invalid date format, again checked for during class cretaion step
       #include only classes in upcoming 2 weeks
       if now<=class_start_datetime<=latest_allowed:
-        upcoming_classes.append(one_class)
-    return upcoming_classes
+        year, week_number, _ = class_start_datetime.isocalendar()
+        week_key = f"{year}-W{week_number}"
+        if week_key not in weekly_classes:
+          weekly_classes[week_key] =[]
+        weekly_classes[week_key].append(one_class)
+    return weekly_classes
 
   def get_class_by_id(self, class_id: str): #get a class by its id
     try:
