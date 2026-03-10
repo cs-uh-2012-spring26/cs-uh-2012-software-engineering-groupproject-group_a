@@ -134,7 +134,7 @@ class ClassList(Resource):
       return {MSG:"End time must be after start time"}, HTTPStatus.NOT_ACCEPTABLE
     
     #Prevent class overlap: two classes at same time at same location
-    existing_classes = ClassResource().get_upcoming_classes()
+    existing_classes = ClassResource().get_upcoming_classes_grouped_by_week()
     for c in existing_classes:
       if c.get(location)!=location_value:
         continue
