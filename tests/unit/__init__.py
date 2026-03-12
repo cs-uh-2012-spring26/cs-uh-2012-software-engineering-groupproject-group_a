@@ -8,6 +8,7 @@ os.environ.setdefault("MONGO_URI", "mongodb://localhost/test")
 os.environ.setdefault("DB_NAME", "test_db")
 os.environ.setdefault("MOCK_DB", "true")
 os.environ.setdefault("DEBUG", "true")
+os.environ.setdefault("JWT_SECRET_KEY", "this-is-a-long-enough-secret-key-for-testing")
 
 
 @pytest.fixture
