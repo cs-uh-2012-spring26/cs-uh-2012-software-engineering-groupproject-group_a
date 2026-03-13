@@ -11,7 +11,8 @@ from http import HTTPStatus
 from flask import Flask
 from flask_restx import Api
 from flask_jwt_extended import JWTManager
-
+from flask_jwt_extended.exceptions import NoAuthorizationError
+from werkzeug.exceptions import BadRequest
 
 def create_app():
     app = Flask(__name__)
@@ -55,8 +56,18 @@ def create_app():
     api.add_namespace(auth_ns)
     api.add_namespace(bookings_ns)
 
-    @api.errorhandler(Exception)
+    #error handlers
+    @api.errorhandler(NoAuthorizationError) #handle missing Authorization header
+    def handle_no_authorization_error(error):
+        return {"message": str(error)}, HTTPStatus.UNAUTHORIZED  # 401
+
+    @api.errorhandler(BadRequest) #handle missing or invalid request body
+    def handle_bad_request(error):
+        return {"message": "Input payload validation failed"}, HTTPStatus.BAD_REQUEST  # 400
+
+
+    @api.errorhandler(Exception) #handle other exceptions
     def handle_input_validation_error(error):
-        return {"message": str(error)}, HTTPStatus.INTERNAL_SERVER_ERROR
+        return {"message": str(error)}, HTTPStatus.INTERNAL_SERVER_ERROR #500 as last resort
 
     return app

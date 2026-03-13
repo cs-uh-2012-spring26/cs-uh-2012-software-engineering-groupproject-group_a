@@ -279,8 +279,8 @@ def test_create_class_without_auth_fails(app_client):
   class_payload = build_valid_class()
 
   response = app_client.post("/classes/", json = class_payload)
-  #Because of app's global exception handler missing auth currently becomes HTTP 500 instead of more specific HTTP 401
-  assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+  #missing JWT should be caught by the NoAuthorizationError handler -- 401
+  assert response.status_code == HTTPStatus.UNAUTHORIZED
 
 def test_create_class_authenticated_member_fails(app_client):
   #Only trainers/admins can create the class
