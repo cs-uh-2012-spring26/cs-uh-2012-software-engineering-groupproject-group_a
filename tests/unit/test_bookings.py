@@ -227,11 +227,7 @@ def test_book_class_uses_booking_resource_create(app_client, seed_data): #Use Ma
 
 
 def test_book_class_unauthenticated(app_client, seed_data):
-    """
-    Booking without a JWT currently results in a 500 because the global
-    Exception handler wraps the underlying NoAuthorizationError.
-    This test documents that behaviour.
-    """
+    #missing JWT should be caught by the NoAuthorizationError handler -- 401
     class_id = seed_data["class_id"]
 
     resp = app_client.post(
@@ -239,22 +235,18 @@ def test_book_class_unauthenticated(app_client, seed_data):
         json={CLASS_ID: class_id},
     )
 
-    assert resp.status_code == 500
+    assert resp.status_code == 401
 
 
 def test_book_class_missing_class_id(app_client, seed_data):
-    """
-    Missing CLASS_ID triggers Flask-RESTX validation (BadRequest), which is
-    then converted into a 500 by the global Exception handler.
-    This test documents that behaviour.
-    """
+    #missing CLASS_ID should be caught by the BadRequest handler -- 400
     user_id = seed_data["user_id"]
     headers = _auth_headers(app_client, user_id)
 
     resp = app_client.post(
         "/bookings/",
-        json={},  # missing CLASS_ID
+        json={},  #missing CLASS_ID in request body
         headers=headers,
     )
 
-    assert resp.status_code == 500
+    assert resp.status_code == 400
