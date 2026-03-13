@@ -163,8 +163,7 @@ def test_view_class_members_forbidden_for_member(app_client, seed_class_and_user
 
     resp = app_client.get(f"/classes/{class_id}/members", headers=headers)
     assert resp.status_code == 403
-    body = resp.get_json()
-    assert body[MSG] == "Only trainers or admins can view class members"
+    assert resp.get_json()[MSG] == "Only trainers or admins can view class members"
 
 
 def test_view_class_members_class_not_found(app_client, seed_class_and_users):
@@ -174,8 +173,30 @@ def test_view_class_members_class_not_found(app_client, seed_class_and_users):
     non_existent_class_id = str(ObjectId())
     resp = app_client.get(f"/classes/{non_existent_class_id}/members", headers=headers)
     assert resp.status_code == 404
-    body = resp.get_json()
-    assert body[MSG] == "Class not found"
+    assert resp.get_json()[MSG] == "Class not found"
+
+def test_view_class_members_empty_class(app_client, seed_class_and_users):
+    #valid class with no bookings should return 200 with an empty list
+    trainer_id = seed_class_and_users["trainer_id"]
+    headers = _auth_headers(app_client, trainer_id)
+
+    #insert a new class with no bookings
+    classes_col = DB.get_collection("classes")
+    empty_class_id = ObjectId()
+    classes_col.insert_one({
+        "_id": empty_class_id,
+        class_name: "Pilates",
+        start_time: (datetime.now() + timedelta(days=3)).isoformat(),
+        end_time: (datetime.now() + timedelta(days=3, hours=1)).isoformat(),
+        location: "Room B",
+        capacity: 10,
+        remaining_spots: 10,
+        trainer_name: "Trainer Name",
+    })
+
+    resp = app_client.get(f"/classes/{str(empty_class_id)}/members", headers=headers) #make the API call
+    assert resp.status_code == 200
+    assert resp.get_json()[MSG] == []
 
 
 def test_view_class_members_calls_booking_lookup(app_client, seed_class_and_users):
@@ -184,17 +205,17 @@ def test_view_class_members_calls_booking_lookup(app_client, seed_class_and_user
     trainer_id = seed_class_and_users["trainer_id"]
     headers = _auth_headers(app_client, trainer_id)
 
-    with patch(
+    with patch( #patch BookingResource.get_class_bookings to return an empty list
         "app.apis.classes.BookingResource.get_class_bookings",
         MagicMock(return_value=[]),
-    ) as mock_get_class_bookings:
-        resp = app_client.get(f"/classes/{class_id}/members", headers=headers)
+    ) as mock_get_class_bookings: 
+        resp = app_client.get(f"/classes/{class_id}/members", headers=headers) #make the API call
 
     assert resp.status_code == 200
     mock_get_class_bookings.assert_called_once_with(class_id)
 
 
-def test_view_class_members_unauthenticated(app_client, seed_class_and_users):
+def test_view_class_members_unauthenticated(app_client, seed_class_and_users): #missing JWT should be caught by the NoAuthorizationError handler -- 401
     class_id = seed_class_and_users["class_id"]
 
     resp = app_client.get(f"/classes/{class_id}/members")
