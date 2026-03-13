@@ -4,6 +4,8 @@ from app.db.classes import ClassResource
 from app.db.classes import class_name, start_time, end_time, location, capacity, remaining_spots, trainer_name
 from app.db.users import UserResource, ROLE, USERNAME, EMAIL, PHONE
 from app.db.bookings import BookingResource, USER_ID
+from app.services.email import send_reminder_email
+
 from http import HTTPStatus
 from flask import request
 from datetime import datetime, timedelta
@@ -209,6 +211,9 @@ class ClassMembers(Resource):
       booking_res = BookingResource()
       bookings = booking_res.get_class_bookings(class_id)
 
+      if not bookings:
+        return {MSG: "No members are registered for this class"}, HTTPStatus.OK 
+
       # loop bookings to fetch user records
       result = []
       seen = set()
@@ -233,3 +238,91 @@ class ClassMembers(Resource):
           })
 
       return {MSG: result}, HTTPStatus.OK
+  
+@api.route("/<string:class_id>/reminders")
+class SendReminders(Resource):
+  @jwt_required()
+  @api.response(
+      HTTPStatus.OK,
+      "Reminders sent",
+      api.model(
+          "RemindersResponse",
+          {MSG: fields.String(example="Reminders sent to 5 member(s). Failed: 0.")},
+      ),
+  )
+  @api.response(
+      HTTPStatus.FORBIDDEN,
+      "Forbidden",
+      api.model(
+          "RemindersForbidden",
+          {MSG: fields.String(example="Only trainers or admins can send reminders")},
+      ),
+  )
+  @api.response(
+      HTTPStatus.NOT_FOUND,
+      "Class not found",
+      api.model(
+          "RemindersNotFound",
+          {MSG: fields.String(example="Class not found")},
+      ),
+  )
+  def post(self, class_id: str):
+    # Authorize: trainer or admin only
+    user_id = get_jwt_identity()
+    user_res = UserResource()
+    user = user_res.get_user_by_id(user_id)
+    if user is None or user.get(ROLE) not in ("trainer", "admin"):
+      return {MSG: "Only trainers or admins can send reminders"}, HTTPStatus.FORBIDDEN
+    
+    # Ensure class exists
+    class_res = ClassResource()
+    cls = class_res.get_class_by_id(class_id)
+    if cls is None:
+      return {MSG: "Class not found"}, HTTPStatus.NOT_FOUND
+    
+    # Fetch all bookings for the class
+    booking_res = BookingResource()
+    bookings = booking_res.get_class_bookings(class_id)
+    if not bookings:
+      return {MSG: "No members are registered for this class"}, HTTPStatus.OK   
+    
+    class_name_value = cls.get(class_name, "")
+    start_time_value = cls.get(start_time, "")
+    location_value   = cls.get(location, "")
+
+    sent   = 0
+    failed = 0
+    seen = set()
+ 
+    for booking in bookings:
+      member_id = booking.get(USER_ID)
+      if not isinstance(member_id, str) or member_id in seen:
+          continue
+      seen.add(member_id)
+ 
+      member = user_res.get_user_by_id(member_id)
+      if member is None:
+          failed += 1
+          continue
+ 
+      member_email = member.get(EMAIL)
+      member_name  = member.get(USERNAME, "Member")
+ 
+      if not member_email:
+          failed += 1
+          continue
+ 
+      success = send_reminder_email(
+          recipient_email=member_email,
+          recipient_name=member_name,
+          class_name=class_name_value,
+          start_time=start_time_value,
+          location=location_value,
+      )
+      if success:
+          sent += 1
+      else:
+          failed += 1
+ 
+    return {MSG: f"Reminders sent to {sent} member(s). Failed: {failed}."}, HTTPStatus.OK
+ 
