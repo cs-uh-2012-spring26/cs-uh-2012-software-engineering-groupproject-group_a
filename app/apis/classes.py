@@ -134,17 +134,18 @@ class ClassList(Resource):
       return {MSG:"End time must be after start time"}, HTTPStatus.NOT_ACCEPTABLE
     
     #Prevent class overlap: two classes at same time at same location
-    existing_classes = ClassResource().get_upcoming_classes_grouped_by_week()
-    for c in existing_classes:
-      if c.get(location)!=location_value:
-        continue
-      try:
-        existing_start = datetime.fromisoformat(c.get(start_time))
-        existing_end = datetime.fromisoformat(c.get(end_time))
-      except Exception:
-         continue
-      if existing_start< end_datetime and start_datetime<existing_end:
-         return {MSG: "Another class is already scheduled at this location during that time"}, HTTPStatus.NOT_ACCEPTABLE
+    existing_classes_by_week = ClassResource().get_upcoming_classes_grouped_by_week()
+    for classes_in_week in existing_classes_by_week.values():
+      for existing_class in classes_in_week:
+        if existing_class.get(location)!=location_value:
+          continue
+        try:
+          existing_start = datetime.fromisoformat(existing_class.get(start_time))
+          existing_end = datetime.fromisoformat(existing_class.get(end_time))
+        except Exception:
+          continue
+        if existing_start< end_datetime and start_datetime<existing_end:
+          return {MSG: "Another class is already scheduled at this location during that time"}, HTTPStatus.NOT_ACCEPTABLE
         
 
     class_resource = ClassResource()
