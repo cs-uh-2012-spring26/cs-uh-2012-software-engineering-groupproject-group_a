@@ -1,13 +1,14 @@
 import os
-from http import HTTPStatus
-from unittest.mock import patch
-
-from datetime import datetime, timedelta
 import pytest
-from app.apis import MSG
+
+from http import HTTPStatus
+from unittest.mock import patch, MagicMock
+from datetime import datetime, timedelta
 from bson import ObjectId
 from flask_jwt_extended import create_access_token
 
+from app.services.email import send_reminder_email
+from app.apis import MSG
 from app import create_app
 from app.db import DB
 
@@ -17,6 +18,8 @@ def app_client():
     os.environ.setdefault("DB_NAME", "test_db")
     os.environ.setdefault("MOCK_DB", "true")
     os.environ.setdefault("DEBUG", "true")
+    os.environ.setdefault("AWS_REGION", "us-east-1")
+    os.environ.setdefault("SES_SENDER_EMAIL", "rm6484@nyu.edu")
     app = create_app()
     app.config["TESTING"] = True
     with app.app_context():
@@ -165,5 +168,23 @@ def test_send_reminders_no_bookings(app_client, seed_data):
     resp = app_client.post(f"/classes/{seed_data["class1_id"]}/reminders", headers=get_trainer_auth_header(app_client))
     assert resp.status_code == 200
     assert resp.json == {MSG: "No members are registered for this class"}
+
+def test_send_reminder_email_success():
+    with patch("app.services.email.boto3.client") as mock_boto:
+        mock_ses = MagicMock()
+        mock_boto.return_value = mock_ses
+        result = send_reminder_email("test@example.com", "Test", "Yoga", "2026-03-20T08:00:00", "Yoga Studio")
+        assert result == True
+
+def test_send_reminder_email_failure():
+    from botocore.exceptions import ClientError
+    with patch("app.services.email.boto3.client") as mock_boto:
+        mock_ses = MagicMock()
+        mock_ses.send_email.side_effect = ClientError({"Error": {"Code": "500", "Message": "fail"}}, "send_email")
+        mock_boto.return_value = mock_ses
+        result = send_reminder_email("test@example.com", "Test", "Yoga", "2026-03-20T08:00:00", "Yoga Studio")
+        assert result == False
+
+
     
 
