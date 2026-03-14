@@ -211,9 +211,6 @@ class ClassMembers(Resource):
       booking_res = BookingResource()
       bookings = booking_res.get_class_bookings(class_id)
 
-      if not bookings:
-        return {MSG: "No members are registered for this class"}, HTTPStatus.OK 
-
       # loop bookings to fetch user records
       result = []
       seen = set()
