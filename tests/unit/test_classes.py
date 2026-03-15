@@ -93,6 +93,8 @@ def build_valid_class():
     "trainer_name": "Emily Smith"
   }
 
+#TESTS FOR FEATURE 1
+
 def test_create_class_success(app_client):
   #Main sucess scenarion for Feature 1
   #Expected behaviour would be that trainer logs in, submits valid data, API creates class, API returns HTTP 200, response contains created class id
@@ -318,3 +320,76 @@ def test_create_class_with_overlapping_time_and_location_fails(app_client):
 
   assert second_response.status_code == HTTPStatus.NOT_ACCEPTABLE
   assert second_response.json == {MSG: "Another class is already scheduled at this location during that time"}
+
+#TESTS FOR FEATURE 2
+
+def test_view_class_list_with_no_upcoming_classes(app_client):
+  #if there are no upcoming classes API should indeed return "No upcoming classes availible"
+
+  response = app_client.get("/classes/")
+
+  assert response.status_code == HTTPStatus.OK
+  assert response.json == {MSG: "No upcoming classes available"}
+
+def test_view_class_list_returns_upcoming_classes_grouped_by_week(app_client):
+  #if upcoming classes do exist, API should return them grouped by week
+  
+  #Log in as trainer to create a class first
+  auth_headers = get_trainer_auth_header(app_client)
+  #create a valid class
+  class_payload = build_valid_class()
+  create_response = app_client.post("/classes/", json = class_payload, headers = auth_headers)
+
+  assert create_response.status_code == HTTPStatus.OK
+
+  #request the class list
+  response = app_client.get("/classes/")
+
+  #check the structure of response
+  assert response.status_code == HTTPStatus.OK
+  assert isinstance(response.json, dict)
+  assert isinstance(response.json.get(MSG), dict)
+
+  weekly_classes = response.json.get(MSG)
+
+  assert len(weekly_classes)>0 #should be at least one week group
+
+  #make sure created class appears
+  all_classes = []
+  for classes_in_week in weekly_classes.values():
+    all_classes.extend(classes_in_week)
+  
+  assert any(one_class["class_name"] == "Yoga" for one_class in all_classes)
+
+def test_view_class_list_includes_full_classes(app_client):
+  #full classes still appear in class list, with remaining_spots = 0
+  #Log in as trainer to create a class first
+  auth_headers = get_trainer_auth_header(app_client)
+  #create a valid class
+  class_payload = build_valid_class()
+  create_response = app_client.post("/classes/", json = class_payload, headers = auth_headers)
+
+  assert create_response.status_code == HTTPStatus.OK
+
+  #update one class to simulate it being full
+  classes_col = DB.get_collection("classes")
+  classes_col.update_one(
+    {"class_name" : "Yoga"},
+    {"$set": {"remaining_spots":0}}
+    )
+  #request class list
+  response = app_client.get("/classes/")
+
+  assert response.status_code == HTTPStatus.OK
+  assert isinstance(response.json.get(MSG), dict)
+
+  weekly_classes = response.json.get(MSG)
+  all_classes = []
+  for classes_in_week in weekly_classes.values():
+    all_classes.extend(classes_in_week)
+
+  #make sure that class is present and has remaining_spots as 0
+  matching_classes = [one_class for one_class in all_classes if one_class["class_name"] == "Yoga"]
+
+  assert len(matching_classes)>0
+  assert matching_classes[0]["remaining_spots"] == 0
