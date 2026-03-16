@@ -152,11 +152,11 @@ def test_send_reminders_failed(app_client, seed_data):
         assert resp.json == {MSG: "Reminders sent to 0 member(s). Failed: 3."}
 
 def test_send_reminders_unauthenticated_user(app_client, seed_data):
-    resp = app_client.post(f"/classes/{seed_data["class1_id"]}/reminders")
+    resp = app_client.post(f"/classes/{seed_data['class1_id']}/reminders")
     assert resp.status_code == 401
 
 def test_send_reminders_forbidden_for_member(app_client, seed_data):
-    resp = app_client.post(f"/classes/{seed_data["class1_id"]}/reminders", headers=get_member_auth_header(app_client))
+    resp = app_client.post(f"/classes/{seed_data['class1_id']}/reminders", headers=get_member_auth_header(app_client))
     assert resp.status_code == 403
 
 def test_send_reminders_class_not_found(app_client):
@@ -165,7 +165,7 @@ def test_send_reminders_class_not_found(app_client):
     assert resp.status_code == 404
     
 def test_send_reminders_no_bookings(app_client, seed_data):
-    resp = app_client.post(f"/classes/{seed_data["class1_id"]}/reminders", headers=get_trainer_auth_header(app_client))
+    resp = app_client.post(f"/classes/{seed_data['class1_id']}/reminders", headers=get_trainer_auth_header(app_client))
     assert resp.status_code == 200
     assert resp.json == {MSG: "No members are registered for this class"}
 
