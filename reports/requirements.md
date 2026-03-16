@@ -181,6 +181,15 @@ This clarification directly impacted our backend design by requiring authenticat
 
 ---
 
+# 3. Sprint Changelog
+
+## Sprint 1 → Sprint 2 Updates
+
+> Sprint 2 introduced Feature 5 (Send Reminder Emails), unit tests for all features, and CI integration. The following are corrections made to Sprint 1 deliverables:
+
+- Fixed a typo in the function call by replacing `get_upcoming_classes()` with `get_upcoming_classes_grouped_by_week()`
+- Updated the UML Use Case Diagram to reflect feedback and current system design
+- Assigned owners to previously unassigned Sprint 1 GitHub issues
 
 
 
