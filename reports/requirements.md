@@ -147,6 +147,38 @@ This clarification directly impacted our backend design by requiring authenticat
 **Success guarantee:**
 - The system returns the booking list for the selected class
 
+### Feature 5: Send Reminder Emails
+**Use Case:** Send Reminder Emails <br>
+
+**Primary Actor:** Trainer, Admin <br>
+
+**Preconditions:** 
+- User is registered and authenticated as trainer/admin.
+- The selected class exists in the system.
+
+**Main Success Scenario:**
+1. Trainer/Admin logs into the system.  
+2. Trainer/Admin selects a class and proceeds to send reminder emails.  
+3. System verifies that the user is authorized as trainer/admin.  
+4. System retrieves the class information from the database.  
+5. System retrieves all members registered for the selected class.  
+6. System prepares reminder emails containing the class name, start time, and location.  
+7. System sends reminder emails to all valid registered members with email addresses.  
+8. System keeps track of successful and failed email deliveries.  
+9. System confirms how many reminder emails were successfully sent and how many failed.  
+
+**Extensions:**
+- 3a. If the user is not a trainer/admin, the system returns an error indicating “Only trainers or admins can send reminders.”  
+- 4a. If the selected class does not exist, the system returns an error indicating “Class not found.”  
+- 5a. If no members are registered for the class, the system returns a message indicating “No members are registered for this class.”  
+- 7a. If a booked member record is invalid or the member no longer exists in the system, the system skips that member and counts the reminder as failed.  
+- 7b. If a booked member does not have an email address, the system skips that member and counts the reminder as failed.  
+- 7c. If an email delivery fails, the system counts that reminder as failed and continues sending reminders to the remaining members.  
+
+**Success guarantee:**
+- Reminder emails are sent to registered members with valid email addresses.
+- The system returns a summary indicating the number of successful and failed reminder emails.
+
 ---
 
 
