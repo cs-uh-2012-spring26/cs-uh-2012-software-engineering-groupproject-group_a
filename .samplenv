@@ -13,7 +13,12 @@
 # database configs
 MONGO_URI="mongodb://localhost:27017"
 DB_NAME="eventsref_dev"
-MOCK_DB="false"
+MOCK_DB="true"
 
 # server config
 DEBUG="true"
+JWT_SECRET_KEY="this-is-a-long-enough-secret-key-for-testing"
+
+# email config
+AWS_REGION=us-east-1
+SES_SENDER_EMAIL=test@example.com
