@@ -19,7 +19,7 @@ def app_client():
     os.environ.setdefault("MOCK_DB", "true")
     os.environ.setdefault("DEBUG", "true")
     os.environ.setdefault("AWS_REGION", "us-east-1")
-    os.environ.setdefault("SES_SENDER_EMAIL", "rm6484@nyu.edu")
+    os.environ.setdefault("SES_SENDER_EMAIL", "test@example.com")
     app = create_app()
     app.config["TESTING"] = True
     with app.app_context():
