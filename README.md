@@ -56,6 +56,20 @@ your `.env` file
 
 You can use `ctrl-c` to stop the server.
 
+### Running the tests
+
+Run the unit tests:
+```sh
+pytest
+```
+
+Generate a coverage report:
+```sh
+coverage run -m pytest
+coverage html
+```
+The first command will generate the coverage report in your terminal. The second will generate an HTML file in `htmlcov/index.html` which you can view in your browser.
+
 ### Manually activating and deactivating the virtual environment
 
 Manually activating and deactivating the virtual environment is useful for
@@ -114,6 +128,21 @@ A trainer account is automatically created when the application starts.
 8. You can now access protected endpoints such as:
 - `POST /classes/` (Create Class – trainer only)
 - `GET /classes/{class_id}/members` (View Class Members – trainer only)
+- `POST /classes/{class_id}/reminders` (Send Reminder Emails – trainer only)
+
+## Email Configuration (Amazon SES)
+
+This application uses Amazon Simple Email Service (SES) to send reminder emails.
+
+To enable email sending, add the following to your `.env` file:
+```
+AWS_REGION=your-aws-region
+SES_SENDER_EMAIL=your-verified-sender-email
+```
+
+Ensure your AWS credentials are configured locally via `aws configure`.
+
+Note: During testing, the email service is mocked and no real emails are sent.
 
 ## Maintainers
 Isumi Wanniarachchi @isumisw 
