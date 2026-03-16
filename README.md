@@ -1,3 +1,5 @@
+![CI](https://github.com/cs-uh-2012-spring26/cs-uh-2012-software-engineering-groupproject-group_a/actions/workflows/ci.yml/badge.svg?branch=main)
+
 # Fitness Class Management and Booking System
 
 This repo is a web application for managing gym class schedules, bookings, and trainer–member interactions. It provides role-based access for members, trainers, and admins, with JWT-based authentication and a RESTful API backend.
