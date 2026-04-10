@@ -7,7 +7,7 @@
 - **Goal:** Critically analyze the current system design to prepare for Feature 6 (recurring classes) and Feature 7 (configurable notifications).
 
 - **Tools used:**
-  - UML support (sequence-diagram generator) to create initial Book Class endpoint sequence diagram.
+  - UML support (sequence-diagram generator extension PySequenceReverse) to create initial Book Class endpoint sequence diagram. (Did not end up using this version. Refer to [README.md](/README.md) for running instructions.)
   - Manual inspection of modules and tests to validate and refine diagrams and findings.
 
 - **Manual analysis:**
@@ -32,6 +32,9 @@
 ![Class Diagram](class_diagram.png)
 
 ### 2.2. Sequence Diagram – Book a Class Endpoint
+![Sequence Diagram – Book Class Endpoint](sequence_diagram_bookclass_endpoint.png)
+
+Inside `BookClass.post`, the endpoint reads `class_id` from the request body and `user_id` from the JWT before calling the DB resources (not shown in the sequence diagram).
 
 ### 2.3. Sequence Diagram – Reminder/Notification Endpoint
 ![Sequence Diagram – Reminder/Notification Endpoint](sequence_diagram_notification_endpoint.png)

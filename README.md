@@ -144,6 +144,31 @@ Ensure your AWS credentials are configured locally via `aws configure`.
 
 Note: During testing, the email service is mocked and no real emails are sent.
 
+## Generating Sequence Diagrams with PySequenceReverse
+We used the **PySequenceReverse – Sequence Diagram Builder for Python** VS Code extension to generate draft sequence diagrams for our endpoints.
+
+### Installation
+
+1. Open VS Code.
+2. Go to the Extensions view.
+3. Search for and install **“PySequenceReverse Sequence Diagram Builder for Python”**.
+
+### Usage
+
+1. Open the Python file and place the cursor on the function whose sequence diagram you want to generate (e.g., `BookClass.post`).
+2. Either:
+   - Right‑click and choose **“PySequenceReverse: Create diagram for this function”**, or  
+   - Press **Ctrl+Shift+P**, type **“PySequenceReverse: Create diagram for this function”**, and select it.
+3. Wait for the extension to generate the diagram and check the status messages in VS Code.
+
+### Optional: Limiting Call Depth
+
+If the generated diagrams are too large/noisy:
+
+1. In VS Code, go to **File → Preferences → Settings**.
+2. Under **Extensions → PySequenceReverse**, reduce **“Maximum call depth”** to a smaller value.
+3. Regenerate the diagram.
+
 ## Maintainers
 Isumi Wanniarachchi @isumisw 
 \
