@@ -43,9 +43,9 @@
 #### 3.1.1. Example 1
 - **Location:** `app/db/classes.py` and `app/apis/bookings.py` – `method name` - imported from `classes.py` at `line 3` in `bookings.py`, used in `line 75`
 
-<img src="apis-bookings-line3.png" alt="Screenshot for Section 3.1.1 showing the import and use of remaining_spots in bookings.py" width="500"> \
+<img src="design_reflection_screenshots/apis-bookings-line3.png" alt="Screenshot for Section 3.1.1 showing the import and use of remaining_spots in bookings.py" width="500"><br>
 
-<img src="apis-bookings-line75.png" alt="Screenshot for Section 3.1.1 showing the import and use of remaining_spots in bookings.py" width="500"> \
+<img src="design_reflection_screenshots/apis-bookings-line75.png" alt="Screenshot for Section 3.1.1 showing the import and use of remaining_spots in bookings.py" width="500"><br>
 
 - **Description:**
   - The API layer directly imports and uses the DB field name `remaining_spots` to check whether a class is full.
@@ -57,7 +57,7 @@
 #### 3.1.2. Example 2
 - **Location:** `app/db/users.py` - `create_user()` - `line 13`, `line 27`
 
-<img src="db-users-line13-27.png" alt="Screenshot for Section 3.1.2 showing the role represented as strings.py" width="500"> \
+<img src="design_reflection_screenshots/db-users-line13-27.png" alt="Screenshot for Section 3.1.2 showing the role represented as strings.py" width="500"><br>  
 
 - **Description:**
   - User roles are represented as raw strings, and authorization logic is based on string comparisons scattered across the codebase.
@@ -77,9 +77,9 @@
 - **Location:** `app/db/users.py` - `create_user()` - `line 21`\
 & `app/apis/auth.py` - `Register.post()` calling `create_user()` - `line 66`
 
-<img src="db-users-line13-27.png" alt="Screenshot for Section 3.4.1 showing the member role set as default" width="500"> \
+<img src="design_reflection_screenshots/db-users-line13-27.png" alt="Screenshot for Section 3.4.1 showing the member role set as default" width="500"><br>  
 
-<img src="apis-auth-line66.png" alt="Screenshot for Section 3.4.1 showing the create_user call with member string" width="500"> \
+<img src="design_reflection_screenshots/apis-auth-line66.png" alt="Screenshot for Section 3.4.1 showing the create_user call with member string" width="500"><br>
 
 
 - **Description:**
