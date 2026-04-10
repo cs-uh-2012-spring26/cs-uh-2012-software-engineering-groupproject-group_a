@@ -39,7 +39,7 @@ This clarification directly impacted our backend design by requiring authenticat
 
 ## UML Use Case Diagram
 
-![Use Case Diagram](UML_Use_Case_Diagram.png)
+![Use Case Diagram](use_case_diagram_sprint3A.png)
 
 ### Use Case Specifications
 
