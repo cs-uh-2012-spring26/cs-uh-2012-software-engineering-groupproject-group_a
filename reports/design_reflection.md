@@ -234,6 +234,33 @@
   - Use Extract Method to split out responsibilities into smaller helpers like `get_and_validate_class(...)`, `ensure_not_already_booked(...)`, `reserve_spot(...)`, `create_booking_record(...)`. 
   This would make `post()` have a clear high-level flow.
 
+#### 4.1.2. `ClassList.post`
+- **Location:** `app/apis/classes.py` – `ClassList.post()` - `line 92–155`
+
+
+<img src="design_reflection_screenshots/apis-classes-lines-92-102.png" alt="Screenshot for Section 4.1.2 ClassList.post() showing authorization, input validation, datetime parsing, scheduling constraints, overlap checking and class creation all in one method" width="500"><br>  
+
+<img src="design_reflection_screenshots/apis-classes-lines-103-122.png" alt="Screenshot for Section 4.1.2 ClassList.post() showing authorization, input validation, datetime parsing, scheduling constraints, overlap checking and class creation all in one method" width="500"><br>  
+
+<img src="design_reflection_screenshots/apis-classes-123-136.png" alt="Screenshot for Section 4.1.2 ClassList.post() showing authorization, input validation, datetime parsing, scheduling constraints, overlap checking and class creation all in one method" width="500"><br>  
+
+<img src="design_reflection_screenshots/apis-classes-138-151.png" alt="Screenshot for Section 4.1.2 ClassList.post() showing authorization, input validation, datetime parsing, scheduling constraints, overlap checking and class creation all in one method" width="500"><br>   
+
+- **Why:**
+  - The method is much longer than 10 lines and mixes multiple responsibilities. It is harder to read, test and maintain because it combines validation, authorization, parsing, overlap logic and response formatting all in one place. 
+- **Refactoring suggestion:** 
+  - Extract helper methods such as validate_request_json(...), authorize_creator(...) and validate_class_fields(...) in order to obtain clearer structure and separate different responsibilities within the method. 
+
+#### 4.1.3. `get_upcoming_classes_grouped_by_week()`
+- **Location:** `app/db/classes.py` – `get_upcoming_classes_grouped_by_week()` - `line 36–61`
+
+<img src="design_reflection_screenshots/db-classes-lines-36-61.png" alt="Screenshot for Section 4.1.3 showing the long get_upcoming_classes_grouped_by_week() function" width="500"><br> 
+
+- **Why:**
+  - The method has more than 10 lines and mixes multiple responsibilities. It is doing too much in one place including retrieving data, parsing dates, filtering and grouping.
+- **Refactoring suggestion:** 
+  - Extract separate methods for parsing/filtering/grouping.
+
 ### 4.2. Primitive Obsession
 
 #### 4.2.1. Roles as plain strings
@@ -279,6 +306,17 @@ And can use permission checks to define allowed roles, etc.
 
 - **Refactoring suggestion:** 
   - Extract shared helper methods such as `authorize_trainer()` and `get_class(class_id)` and have both methods call them. This removes duplication and improves readability.
+
+#### 4.4.2. Example 2
+- **Location:** `app/apis/classes.py` – repeated validation checks – `lines 110–121`
+
+<img src="design_reflection_screenshots/apis-classes-lines-110-121.png" alt="Screenshot showing the identical auth block and class-existence check in both methods" width="500"><br> 
+
+- The same validation pattern is repeated for each input field. This includes retrieve value, check type or emptiness and return error.
+
+- **Refactoring suggestion:** 
+  - Extract a shared validation helper for required string/int fields. This will improve quality of code, make it shorter and easier to read.
+
 
 ### 4.5. Dead Code
 
