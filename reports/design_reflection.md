@@ -33,6 +33,7 @@
 ### 2.2. Sequence Diagram – Book a Class Endpoint
 
 ### 2.3. Sequence Diagram – Reminder/Notification Endpoint
+![Sequence Diagram – Reminder/Notification Endpoint](sequence_diagram_notification_endpoint.png)
 
 ---
 
