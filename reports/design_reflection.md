@@ -33,6 +33,7 @@
 ### 2.2. Sequence Diagram – Book a Class Endpoint
 
 ### 2.3. Sequence Diagram – Reminder/Notification Endpoint
+![Sequence Diagram – Reminder/Notification Endpoint](sequence_diagram_notification_endpoint.png)
 
 ---
 
@@ -70,6 +71,21 @@
 
 ### 3.3. Single Responsibility Principle
 
+#### 3.3.1. Example 1
+
+- **Location:** `app/apis/classes.py` - `ClassMembers.get()` - `lines 195-219`'
+
+<img src="design_reflection_screenshots/apis-classes-lines195-219.png" alt="Screenshot for Section 3.3.1 ClassMembers.get() showing auth block, class lookup, booking fetch, and member assembly all in one method" width="500"><br>  
+
+- **Description:**
+  - The `ClassMembers.get()` method performs multiple distinct responsibilities in a single method: it authorizes the user, checks that the class exists, fetches all bookings for the class, and then fetches and formats each member's details.
+
+- **Why it’s a violation:**
+  - SRP states that a method should have only one reason to change. This method would need to be modified if the authorization logic changes, if the booking retrieval logic changes, or if the member data formatting changes. These are three independent reasons to modify the same method, making it harder to maintain and test in isolation.
+
+- **Possible refactor:** 
+  - Extract the different responsibilities as helper methods so the API method only handles HTTP concerns.
+
 ### 3.4. Open-Close Principle
 
 #### 3.4.1. Example 1
@@ -88,9 +104,37 @@
 - **Possible refactor:** 
   - Introduce role-aware registration strategies or separate registration endpoints (e.g., `MemberRegister`, `TrainerRegister`) that point to a common user-creation service, allowing new flows to be added without changing the existing ones.
 
+#### 3.4.2. Example 2
 
+- **Location:** `app/apis/classes.py` - `SendReminders.post()` - the `send_reminder_email` call - `line 312`
+
+<img src="design_reflection_screenshots/apis-classes-line312.png" alt="Screenshot for Section 3.4.2 showing the send_reminder_email call" width="500"><br>  
+
+- **Description:**
+  - The reminder sending logic is hardcoded to call `send_reminder_email()` directly. There is no abstraction layer between the API method and the specific email implementation.
+
+- **Why it’s a violation:**
+  - OCP states that a class/method should be open for extension but closed for modification. To add any new channel, `SendReminders.post()` would need to be directly modified rather than extended. The method is not closed for modification when requirements change.
+
+- **Possible refactor:** 
+  - Introduce an abstract `NotificationSender` base class and create concrete subclasses like `EmailNotificationSender`, `TelegramNotificationSender` etc. `SendReminders.post()` would then depend on the abstraction and new channels can be added without touching existing code
 
 ### 3.5. Dependency Inversion Principle
+
+#### 3.5.1. Example 1
+
+- **Location:** `app/apis/classes.py` - import of `send_reminder_email` from `app.services.email` and its usage in `SendReminders.post()` - `line 312` \
+
+<img src="design_reflection_screenshots/apis-classes-line312.png" alt="Screenshot for Section 3.5.1 showing the used of send_reminder_email method" width="500"><br>  
+
+- **Description:**
+  - `SendReminders` is a high-level API resource class that directly imports and calls the low-level concrete function `send_reminder_email` from `app.services.email`
+
+- **Why it’s a violation:**
+  - DIP states that high-level modules should not depend on low-level modules and both should depend on abstractions. Here the high-level `SendReminders` class is tightly coupled to the specific email implementation. If the notification mechanism changes, the high-level class must change too.
+
+- **Possible refactor:** 
+  - Introduce a `NotificationService` abstract interface into `SendReminders` so the high-level class depends on the abstraction rather than the concrete email function
 
 ---
 
