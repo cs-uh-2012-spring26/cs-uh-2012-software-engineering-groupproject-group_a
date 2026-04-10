@@ -69,12 +69,13 @@
   - Introduce a centralized authorization helper, role enum, or permission-checking method so role definitions and access rules are managed in one place.
 
 #### 3.1.3. Example 3
-- **Location:** `app/db/classes.py` and `app/apis/classes.py` - DB field-name constants imported from classes.py at line 4 in apis/classes.py, defined in db/classes.py at lines 9–17, used in apis/classes.py at lines 103–108 and 145–146
+- **Location:** `app/db/classes.py` and `app/apis/classes.py` - DB field-name constants imported from classes.py at line 4 in apis/classes.py, defined in db/classes.py at lines 9–17, used in apis/classes.py at lines 103–108 
 
 <img src="design_reflection_screenshots/db-classes-lines-9-17.png" alt="Screenshot for Section 3.1.3 definition of above mentioned variables in db/classes.py" width="500"><br>
+
 <img src="design_reflection_screenshots/apis-classes-lines-4.png" alt="Screenshot for Section 3.1.3 import of above mentioned variables in apis/classes.py" width="500"><br>
+
 <img src="design_reflection_screenshots/apis-classes-lines-103-108.png" alt="Screenshot for Section 3.1.3 use of above mentioned variables in apis/classes.py" width="500"><br>  
-<img src="design_reflection_screenshots/apis-classes-lines-145-146.png" alt="Screenshot for Section 3.1.3 use of above mentioned variables in apis/classes.py" width="500"><br>
 
 - **Description:**
   - The API layer directly imports and uses DB field names such as class_name, start_time, end_time, location, capacity, trainer_name and remaining_spots.
@@ -95,11 +96,13 @@
 - **Possible refactor:** 
   - Move this logic into ClassResource so the API doesn’t have to deal with internal data details.
 ### 3.2. Modularity (OOD Principle)
-#### 3.2.1. Example 1
+#### 3.2.1. Example 1 - High Coupling 
 - **Location:** `app/apis/classes.py` - `ClassList.post()`- `lines 97–101, 139, 153–154` 
 
 <img src="design_reflection_screenshots/apis-classes-lines-97-101.png" alt="Screenshot for Section 3.2.1 showing the high coupling example in classes.py" width="500"><br>
+
 <img src="design_reflection_screenshots/apis-classes-lines-139.png" alt="Screenshot for Section 3.2.1 showing the high coupling example in classes.py" width="500"><br>
+
 <img src="design_reflection_screenshots/apis-classes-lines-153-154.png" alt="Screenshot for Section 3.2.1 showing the high coupling example in classes.py" width="500"><br>
 
 - **Description:**
@@ -128,6 +131,27 @@
 
 - **Possible refactor:** 
   - Extract the different responsibilities as helper methods so the API method only handles HTTP concerns.
+
+#### 3.3.2. Example 2
+
+- **Location:** `app/apis/classes.py` - `ClassList.post()` - `lines 92–155`
+
+<img src="design_reflection_screenshots/apis-classes-lines-92-102.png" alt="Screenshot for Section 3.3.2 ClassList.post() showing authorization, input validation, datetime parsing, scheduling constraints, overlap checking and class creation all in one method" width="500"><br>  
+
+<img src="design_reflection_screenshots/apis-classes-lines-103-122.png" alt="Screenshot for Section 3.3.2 ClassList.post() showing authorization, input validation, datetime parsing, scheduling constraints, overlap checking and class creation all in one method" width="500"><br>  
+
+<img src="design_reflection_screenshots/apis-classes-123-136.png" alt="Screenshot for Section 3.3.2 ClassList.post() showing authorization, input validation, datetime parsing, scheduling constraints, overlap checking and class creation all in one method" width="500"><br>  
+
+<img src="design_reflection_screenshots/apis-classes-138-151.png" alt="Screenshot for Section 3.3.2 ClassList.post() showing authorization, input validation, datetime parsing, scheduling constraints, overlap checking and class creation all in one method" width="500"><br>  
+
+- **Description:**
+  - This method handles request validation, authorization, input validation, datetime parsing, scheduling constraints, overlap checking, class creation and response formatting.
+
+- **Why it’s a violation:**
+  - This violates SRP because the method has multiple reasons to change. A change in request format, validation rules, scheduling rules or overlap rules would all require modifying this same method.
+
+- **Possible refactor:** 
+  - Extract smaller methods.
 
 ### 3.4. Open-Close Principle
 
@@ -161,6 +185,20 @@
 
 - **Possible refactor:** 
   - Introduce an abstract `NotificationSender` base class and create concrete subclasses like `EmailNotificationSender`, `TelegramNotificationSender` etc. `SendReminders.post()` would then depend on the abstraction and new channels can be added without touching existing code
+
+#### 3.4.3. Example 3
+
+- **Location:** `app/apis/classes.py` - `ClassList.post()` - `line 100`\
+
+<img src="design_reflection_screenshots/apis-classes-lines-100.png" alt="Screenshot for Section 3.4.3 showing the trainer and admin being hard-coded" width="500"><br>  
+
+- **Description:**
+  - Authorization is hardcoded using the string literals "trainer" and "admin".
+- **Why it’s a violation:**
+  - This violates the Open-Closed Principle because if a new role is added or the permission rules change, the existing logic has to be changed directly instead of being extended.
+- **Possible refactor:** 
+  - Instead of checking roles directly, use a helper like can_create_class(user) or a separate module to handle permissions.
+
 
 ### 3.5. Dependency Inversion Principle
 
