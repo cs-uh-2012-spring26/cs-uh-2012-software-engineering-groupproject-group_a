@@ -191,8 +191,16 @@ This clarification directly impacted our backend design by requiring authenticat
 - Updated the UML Use Case Diagram to reflect feedback and current system design
 - Assigned owners to previously unassigned Sprint 1 GitHub issues
 
+## Sprint 2 → Sprint 3A Updates
 
+> Sprint 3A focused on design analysis rather than feature implementation. 
+No new features were added this sprint. The sprint involved critically 
+analyzing the existing system design through UML diagrams, identifying 
+design principle violations, identifying code smells, and reflecting on 
+how the current design would support or hinder the implementation of 
+two new planned features. The following are corrections made to Sprint 2 deliverables:
 
+- Updated the UML Use Case Diagram to depict authentication and add Email Service as a secondary actor
 
 
 
