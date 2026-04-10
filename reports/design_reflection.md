@@ -21,8 +21,8 @@
 
 - **Team member responsibilities:**
   - Isumi: Sequence diagram fo Book Class endpoint, identify design principle violations and code smells for Book Class flow and authentication flow
-  - Nadja: Class diagram to show main classes and their associations, identify design principle violations and code smells for Create Class flow and View Class List
-  - Rujul:
+  - Nada: Class diagram to show main classes and their associations, identify design principle violations and code smells for Create Class flow and View Class List
+  - Rujul: Sequence diagram for the notification endpoint, identified design principle violations and code smells in the code related to sending reminders and viewing the class members list
 
 ---
 
@@ -116,7 +116,7 @@
 
 #### 3.3.1. Example 1
 
-- **Location:** `app/apis/classes.py` - `ClassMembers.get()` - `lines 195-219`'
+- **Location:** `app/apis/classes.py` - `ClassMembers.get()` - `lines 195-219`
 
 <img src="design_reflection_screenshots/apis-classes-lines195-219.png" alt="Screenshot for Section 3.3.1 ClassMembers.get() showing auth block, class lookup, booking fetch, and member assembly all in one method" width="500"><br>  
 
@@ -149,7 +149,7 @@
 
 #### 3.4.2. Example 2
 
-- **Location:** `app/apis/classes.py` - `SendReminders.post()` - the `send_reminder_email` call - `line 312`
+- **Location:** `app/apis/classes.py` - `SendReminders.post()` calls `send_reminder_email` - `line 312`
 
 <img src="design_reflection_screenshots/apis-classes-line312.png" alt="Screenshot for Section 3.4.2 showing the send_reminder_email call" width="500"><br>  
 
@@ -220,7 +220,27 @@ And can use permission checks to define allowed roles, etc.
 
 ### 4.3. Long Parameter List
 
+#### 4.3.1. Example 1
+- **Location:** `app/apis/classes.py` – `SendReminders.post()` calling `send_reminder_email` `line 312`, and `app/services/email.py` – `send_reminder_email()` definition
+
+<img src="design_reflection_screenshots/apis-classes-line312.png" alt="Screenshot of the send_reminder_email call in SendReminders.post() showing all five arguments" width="500"><br> 
+
+- The call to `send_reminder_email` passes five individual arguments extracted from separate variables.
+
+- **Refactoring suggestion:** 
+  - Introduce a parameter object to group these arguments into a ReminderData dataclass so callers pass one object instead of five primitives, reducing coupling between the caller and the function signature.
+
 ### 4.4. Duplicate Code
+
+#### 4.4.1. Example 1
+- **Location:** `app/apis/classes.py` – `ClassMembers.get()` and `SendReminders.post()` - `lines 267-278` and `lines 196-208`
+
+<img src="design_reflection_screenshots/apis-classes-lines267-278.png" alt="Screenshot showing the identical auth block and class-existence check in both methods" width="500"><br> 
+
+- Both `ClassMembers.get()` and `SendReminders.post()` methods contain identical blocks of code for authorization and checking the existence of a class.
+
+- **Refactoring suggestion:** 
+  - Extract shared helper methods such as `authorize_trainer()` and `get_class(class_id)` and have both methods call them. This removes duplication and improves readability.
 
 ### 4.5. Dead Code
 
@@ -255,9 +275,16 @@ And can use permission checks to define allowed roles, etc.
 ### 5.1. Overall Maintainability and Extensibility
 
 #### for Feature 6 Recurring Classes: 
+- Because booking logic and scheduling logic are tightly coupled in `BookClass.post`, if we want to add features like book whole series, skip one occurrence, update all future times - we will have to modify that method and related code in several places, rather than extending via new strategies or services. This links back to the earlier Open–Closed Principle, and would worsen Long Method smell (4.1.1).
+
 #### for Feature 7 Configurable Notifications:
 
 ### 5.2. Existing Design Flaws
 
 #### impacting Feature 6 Recurring Classes: 
+- Because `BookClass.post` mixes responsibilities (load class, validate, check duplicate bookings, capacity, create record), if we add recurring-logic paths (book a particular occurrence vs entire series, enforce series-level limits) this would further bloat this method. This is a Long Method smell (4.1.1) and an Open–Closed Principle violation because to support recurring classes, we must modify the existing `post()`.
+
+- For recurring classes, the role issues will still apply since there will be role-based permissions like how only trainers can create/modify a series. Because roles are currently plain strings (`"member", "trainer", "admin"`), to expand authorization rules for new recurring-class operations, we may have to add more string comparisons (`if user.role == "trainer":`, etc.) across booking and scheduling code, amplifying the Primitive Obsession smell (4.2.1).
+
+
 #### impacting Feature 7 Configurable Notifications:  
