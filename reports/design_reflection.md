@@ -168,9 +168,16 @@ And can use permission checks to define allowed roles, etc.
 ### 5.1. Overall Maintainability and Extensibility
 
 #### for Feature 6 Recurring Classes: 
+- Because booking logic and scheduling logic are tightly coupled in `BookClass.post`, if we want to add features like book whole series, skip one occurrence, update all future times - we will have to modify that method and related code in several places, rather than extending via new strategies or services. This links back to the earlier Open–Closed Principle, and would worsen Long Method smell (4.1.1).
+
 #### for Feature 7 Configurable Notifications:
 
 ### 5.2. Existing Design Flaws
 
 #### impacting Feature 6 Recurring Classes: 
+- Because `BookClass.post` mixes responsibilities (load class, validate, check duplicate bookings, capacity, create record), if we add recurring-logic paths (book a particular occurrence vs entire series, enforce series-level limits) this would further bloat this method. This is a Long Method smell (4.1.1) and an Open–Closed Principle violation because to support recurring classes, we must modify the existing `post()`.
+
+- For recurring classes, the role issues will still apply since there will be role-based permissions like how only trainers can create/modify a series. Because roles are currently plain strings (`"member", "trainer", "admin"`), to expand authorization rules for new recurring-class operations, we may have to add more string comparisons (`if user.role == "trainer":`, etc.) across booking and scheduling code, amplifying the Primitive Obsession smell (4.2.1).
+
+
 #### impacting Feature 7 Configurable Notifications:  
