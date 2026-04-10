@@ -22,7 +22,7 @@
 - **Team member responsibilities:**
   - Isumi: Sequence diagram fo Book Class endpoint, identify design principle violations and code smells for Book Class flow and authentication flow
   - Nada: Class diagram to show main classes and their associations, identify design principle violations and code smells for Create Class flow and View Class List
-  - Rujul: Sequence diagram for the notification endpoint, identified design principle violations and code smells in the code related to sending reminders and viewing the class members list
+  - Rujul: Sequence diagram for the notification endpoint, identify design principle violations and code smells in the code related to sending reminders and viewing the class members list
 
 ---
 
@@ -358,6 +358,8 @@ And can use permission checks to define allowed roles, etc.
 
 #### for Feature 7 Configurable Notifications:
 
+- Since `SendReminders.post()` directly calls `send_reminder_email()` with no abstraction layer, adding support for Telegram, SMS, or any other channel requires modifying `SendReminders.post()` directly rather than extending it with a new implementation. This links back to the Open-Closed Principle violation and Dependency Inversion Principle violation identified in Section 3. A proper `NotificationSender` abstraction would allow new channels to be added without touching existing code.
+
 ### 5.2. Existing Design Flaws
 
 #### impacting Feature 6 Recurring Classes: 
@@ -370,3 +372,10 @@ Because there is no clear structure for handling scheduling, recurrence logic (l
 
 
 #### impacting Feature 7 Configurable Notifications:  
+
+- `SendReminders.post()` is already a Long Method smell, adding notification preference logic per user would further extend this method, worsening the existing smell significantly.
+
+- Because `SendReminders.post()` depends directly on the concrete `send_reminder_email()` function rather than an abstraction (DIP violation, Section 3.5.1), to support multiple channels we would need to add conditional logic directly inside the method. This would introduce a new OCP violation on top of the existing one, and also introduce a Primitive Obsession smell since notification preferences would likely be stored and compared as plain strings rather than proper objects.
+
+- The Long Parameter List smell in `send_reminder_email()` (Section 4.3.1) would be replicated across every new channel specific function added, since each would need the same recipient and class details passed individually unless a ReminderData parameter object is introduced first.
+
