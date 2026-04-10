@@ -21,7 +21,7 @@
 
 - **Team member responsibilities:**
   - Isumi: Sequence diagram fo Book Class endpoint, identify design principle violations and code smells for Book Class flow and authentication flow
-  - Nadja:
+  - Nadja: Class diagram to show main classes and their associations, identify design principle violations and code smells for Create Class flow and View Class List
   - Rujul:
 
 ---
@@ -29,6 +29,7 @@
 ## 2. Design Diagrams (Task 1)
 
 ### 2.1. Class Diagram – Current Design
+![Class Diagram](class_diagram.png)
 
 ### 2.2. Sequence Diagram – Book a Class Endpoint
 
@@ -67,7 +68,49 @@
 - **Possible refactor:** 
   - Introduce a centralized authorization helper, role enum, or permission-checking method so role definitions and access rules are managed in one place.
 
+#### 3.1.3. Example 3
+- **Location:** `app/db/classes.py` and `app/apis/classes.py` - DB field-name constants imported from classes.py at line 4 in apis/classes.py, defined in db/classes.py at lines 9–17, used in apis/classes.py at lines 103–108 and 145–146
+
+<img src="design_reflection_screenshots/db-classes-lines-9-17.png" alt="Screenshot for Section 3.1.3 definition of above mentioned variables in db/classes.py" width="500"><br>
+<img src="design_reflection_screenshots/apis-classes-lines-4.png" alt="Screenshot for Section 3.1.3 import of above mentioned variables in apis/classes.py" width="500"><br>
+<img src="design_reflection_screenshots/apis-classes-lines-103-108.png" alt="Screenshot for Section 3.1.3 use of above mentioned variables in apis/classes.py" width="500"><br>  
+<img src="design_reflection_screenshots/apis-classes-lines-145-146.png" alt="Screenshot for Section 3.1.3 use of above mentioned variables in apis/classes.py" width="500"><br>
+
+- **Description:**
+  - The API layer directly imports and uses DB field names such as class_name, start_time, end_time, location, capacity, trainer_name and remaining_spots.
+- **Why it’s a violation:**
+  - This breaks encapsulation because the API layer knows the internal details of the DB layer. Instead of using methods from ClassResource, the API directly uses field names. In the current design, if any field name changes in db/classes.py, the API code must also change.
+- **Possible refactor:** 
+  - Hide these details behind methods in ClassResource, such as get_class_data(...) so the API does not depend directly on DB constants.
+
+### 3.1.4. Example 4
+- **Location:** `app/apis/classes.py` - `ClassList.post()` - `lines 139–150`
+
+<img src="design_reflection_screenshots/apis-classes-lines-139-150.png" alt="Screenshot for Section 3.1.4 showing the get_upcoming_classes_grouped_by_week()" width="500"><br>  
+
+- **Description:**
+  - The API layer directly inspects the structure returned by ClassResource().get_upcoming_classes_grouped_by_week() by looping through grouped classes, reading raw dictionary fields and reparsing stored date strings.
+- **Why it’s a violation:**
+  - This breaks encapsulation because the API layer knows too much about how class data is stored and returned. It knows that the result is grouped by week, that each class is represented as a dictionary and that date fields are stored as ISO strings. If the return structure changes, the API logic must change too.
+- **Possible refactor:** 
+  - Move this logic into ClassResource so the API doesn’t have to deal with internal data details.
 ### 3.2. Modularity (OOD Principle)
+#### 3.2.1. Example 1
+- **Location:** `app/apis/classes.py` - `ClassList.post()`- `lines 97–101, 139, 153–154` 
+
+<img src="design_reflection_screenshots/apis-classes-lines-97-101.png" alt="Screenshot for Section 3.2.1 showing the high coupling example in classes.py" width="500"><br>
+<img src="design_reflection_screenshots/apis-classes-lines-139.png" alt="Screenshot for Section 3.2.1 showing the high coupling example in classes.py" width="500"><br>
+<img src="design_reflection_screenshots/apis-classes-lines-153-154.png" alt="Screenshot for Section 3.2.1 showing the high coupling example in classes.py" width="500"><br>
+
+- **Description:**
+  - The API endpoint directly constructs and depends on concrete classes such as UserResource() and ClassResource().
+- **Why it’s a violation:**
+  - This is an example of high coupling because the API depends on the internal structure and behavior of multiple components instead of interacting through simple interfaces.
+- **Possible refactor:** 
+  - Introduce a service layer so the API is less tightly coupled to concrete DB or resource implementations.
+
+
+
 
 ### 3.3. Single Responsibility Principle
 
