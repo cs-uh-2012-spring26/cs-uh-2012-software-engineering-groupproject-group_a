@@ -22,7 +22,7 @@
 - **Team member responsibilities:**
   - Isumi: Sequence diagram fo Book Class endpoint, identify design principle violations and code smells for Book Class flow and authentication flow
   - Nadja:
-  - Rujul:
+  - Rujul: Sequence diagram for the notification endpoint, identified design principle violations and code smells in the code related to sending reminders and viewing the class members list
 
 ---
 
@@ -73,7 +73,7 @@
 
 #### 3.3.1. Example 1
 
-- **Location:** `app/apis/classes.py` - `ClassMembers.get()` - `lines 195-219`'
+- **Location:** `app/apis/classes.py` - `ClassMembers.get()` - `lines 195-219`
 
 <img src="design_reflection_screenshots/apis-classes-lines195-219.png" alt="Screenshot for Section 3.3.1 ClassMembers.get() showing auth block, class lookup, booking fetch, and member assembly all in one method" width="500"><br>  
 
@@ -106,7 +106,7 @@
 
 #### 3.4.2. Example 2
 
-- **Location:** `app/apis/classes.py` - `SendReminders.post()` - the `send_reminder_email` call - `line 312`
+- **Location:** `app/apis/classes.py` - `SendReminders.post()` calls `send_reminder_email` - `line 312`
 
 <img src="design_reflection_screenshots/apis-classes-line312.png" alt="Screenshot for Section 3.4.2 showing the send_reminder_email call" width="500"><br>  
 
@@ -177,7 +177,27 @@ And can use permission checks to define allowed roles, etc.
 
 ### 4.3. Long Parameter List
 
+#### 4.3.1. Example 1
+- **Location:** `app/apis/classes.py` – `SendReminders.post()` calling `send_reminder_email` `line 312`, and `app/services/email.py` – `send_reminder_email()` definition
+
+<img src="design_reflection_screenshots/apis-classes-line312.png" alt="Screenshot of the send_reminder_email call in SendReminders.post() showing all five arguments" width="500"><br> 
+
+- The call to `send_reminder_email` passes five individual arguments extracted from separate variables.
+
+- **Refactoring suggestion:** 
+  - Introduce a parameter object to group these arguments into a ReminderData dataclass so callers pass one object instead of five primitives, reducing coupling between the caller and the function signature.
+
 ### 4.4. Duplicate Code
+
+#### 4.4.1. Example 1
+- **Location:** `app/apis/classes.py` – `ClassMembers.get()` and `SendReminders.post()` - `lines 267-278` and `lines 196-208`
+
+<img src="design_reflection_screenshots/apis-classes-lines267-278.png" alt="Screenshot showing the identical auth block and class-existence check in both methods" width="500"><br> 
+
+- Both `ClassMembers.get()` and `SendReminders.post()` methods contain identical blocks of code for authorization and checking the existence of a class.
+
+- **Refactoring suggestion:** 
+  - Extract shared helper methods such as `authorize_trainer()` and `get_class(class_id)` and have both methods call them. This removes duplication and improves readability.
 
 ### 4.5. Dead Code
 
