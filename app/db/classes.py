@@ -67,7 +67,10 @@ class ClassResource:
         return None
     class_ = self.collection.find_one({"_id": obj_id})
     return serialize_item(class_)
-
+  
+  def has_remaining_spots(self, class_id):
+    class_obj = self.get_class_by_id(class_id)
+    return bool(class_obj and class_obj.get(remaining_spots, 0) > 0)
 
   def decrement_remaining_spots(self, class_id: str): #decrement remaining spots of a class when a member books it
     from bson import ObjectId

@@ -1,4 +1,4 @@
-from app.db.utils import serialize_item, serialize_items
+from app.db.utils import serialize_item
 from app.db import DB
 from bson import ObjectId
 from enum import Enum
