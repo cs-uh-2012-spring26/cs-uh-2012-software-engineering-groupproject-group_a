@@ -31,13 +31,14 @@ REGISTER_USER = api.model(
         EMAIL: fields.String(required=True, example=_EXAMPLE_USER_1[EMAIL]),
         "password": fields.String(required=True, example=_EXAMPLE_USER_1["password"]),
         PHONE: fields.String(required=True, example=_EXAMPLE_USER_1[PHONE]),
+        ROLE: fields.String(required=False, enum=["member", "trainer", "admin"], example="member", description="Defaults to member"),
     },
 )
 
 LOGIN_USER = api.model(
     "Login",
     {
-        USERNAME: fields.String(required=True, example=_EXAMPLE_USER_1[USERNAME]),
+        EMAIL: fields.String(required=True, example=_EXAMPLE_USER_1[EMAIL]),
         "password": fields.String(required=True, example=_EXAMPLE_USER_1["password"]),
     },
 )
@@ -60,10 +61,11 @@ class Register(Resource):
         password = request.json.get("password")
         phone = request.json.get(PHONE)
         user_res = UserResource()
+        role = user_res.parse_role(request.json.get(ROLE))
         if user_res.get_user_by_username(username) or user_res.get_user_by_email(email):
             return {MSG: "Username or email already exists"}, HTTPStatus.BAD_REQUEST
         password_hash = generate_password_hash(password)
-        user_id = user_res.create_user(username, email, password_hash, phone, role="member")
+        user_id = user_res.create_user(username, email, password_hash, phone, role)
 
         return {MSG: f"User created with id: {user_id}"}, HTTPStatus.CREATED
 
@@ -73,11 +75,11 @@ class Login(Resource):
     @api.response(HTTPStatus.OK, "Login successful", TOKEN_MODEL)
     @api.response(HTTPStatus.UNAUTHORIZED, "Invalid credentials")
     def post(self):
-        username = request.json.get(USERNAME)
+        email = request.json.get(EMAIL)
         password = request.json.get("password")
 
         user_res = UserResource()
-        user = user_res.get_user_by_username(username)
+        user = user_res.get_user_by_email(email)
         if user is None:
             return {MSG: "Invalid credentials"}, HTTPStatus.UNAUTHORIZED
 
