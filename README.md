@@ -100,35 +100,60 @@ deactivate
 
 This API uses JWT-based authentication to protect certain endpoints.
 
-### Pre-seeded Trainer Account
 
-A trainer account is automatically created when the application starts.
-
-**Trainer Credentials:**
-
-- Username: `trainer1`
-- Password: `password123`
 
 ---
 
-## How to Test Trainer-Only Endpoints in Swagger
+## How Admin & Trainer accounts work
+Both admin and trainer log in with email + password using the same /auth/login endpoint.\
+The admin account is pre-seeded when the app starts.\
+Only the admin can register new trainers (via the admin‑protected trainer registration endpoint).
+Only admin and trainers can:
+- create classes,
+- view classes,
+- send reminders for their classes.
 
-- Start the server following the instructions above.
-- Open Swagger UI in your browser.
-- Navigate to `POST /auth/login`.
-- Login using: 
+### Pre-seeded Admin Account
+An admin account is automatically created when the application starts.
+
+**Admin Credentials:**
+- Username: `admin1`
+- Email: `admin1@test.com`
+- Password: `password123`
+
+## How to Test Admin & Trainer Flows in Swagger
+Log in as the pre-seeded admin:
+1. Start the server following the instructions above.
+2. Open Swagger UI in your browser.
+3. Navigate to `POST /auth/login`.
+4. Log in using: 
 {
-  "username": "trainer1",
+  "email": "admin1@test.com",
   "password": "password123"
 }
-5. Copy the access_token from the response.
-6. Click the Authorize button in Swagger.
+5. Copy the `access_token` from the response.
+6. Click the Authorize button in Swagger (top-right).
 7. Paste the token in the following format:
 `Bearer <your_access_token>`
+8. Click authorize and close. You are now authenticated as admin.
+
+Register a Trainer (admin only):
+1. Navigate to `POST /auth/register/trainer`.
+2. Provide the trainer details, and send the request. If you try this without an admin token, you’ll get a 403 Admin access required error.
+
+Log in as a Trainer:
+1. Log out of existing Swagger authorization (Authorize -> Logout)
+2. Navigate to `POST /auth/login`.
+3. Log in using registered trainer credentials.
+4. Copy trainer's `access_token` from the response.
+5. Click the Authorize button in Swagger (top-right).
+6. Paste the token in the following format:
+`Bearer <your_access_token>`
+7. Click authorize and close. You are now authenticated as trainer.
 8. You can now access protected endpoints such as:
-- `POST /classes/` (Create Class – trainer only)
-- `GET /classes/{class_id}/members` (View Class Members – trainer only)
-- `POST /classes/{class_id}/reminders` (Send Reminder Emails – trainer only)
+- `POST /classes/` (Create Class – admin/trainer only)
+- `GET /classes/{class_id}/members` (View Class Members – admin/trainer only)
+- `POST /classes/{class_id}/reminders` (Send Reminder Emails – admin/trainer only)
 
 ## Email Configuration (Amazon SES)
 

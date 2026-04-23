@@ -97,7 +97,7 @@ class ClassList(Resource):
     user_id = get_jwt_identity()
     user_res = UserResource()
     user = user_res.get_user_by_id(user_id)
-    if user is None or user.get(ROLE) not in ("trainer", "admin"):
+    if  not user_res.can_create_class(user):
       return {MSG: "Only trainers or admins can create classes"}, HTTPStatus.FORBIDDEN
 
     class_name_value = request.json.get(class_name)

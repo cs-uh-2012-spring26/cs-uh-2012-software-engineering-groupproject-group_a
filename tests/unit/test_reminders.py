@@ -92,16 +92,20 @@ def seed_data():
 
     return {"class1_id":str(class1_id), "class2_id":str(class2_id), "member_id":str(member1_id)}
 
-def get_trainer_auth_header(app_client):
-  #Log in as seeded trainer user and return valid JWT auth header
+def get_admin_auth_header(app_client):
+  #Log in as seeded admin user and return valid JWT auth header
   login_response = app_client.post(
     "/auth/login",
     json ={
-      "name": "trainer1",
+      "email": "admin1@test.com",
       "password": "password123"
     },
   )
+  assert login_response.status_code == HTTPStatus.OK
+
   access_token = login_response.json.get("access_token")
+  assert access_token is not None
+
   return {"Authorization": f"Bearer {access_token}"}
 
 def get_member_auth_header(app_client):
@@ -113,7 +117,7 @@ def get_member_auth_header(app_client):
   password = "password123"
 
   #register a new member
-  register_response = app_client.post("/auth/register",
+  register_response = app_client.post("/auth/register/member",
     json = {
       "name" : username,
       "email" : email,
@@ -127,27 +131,27 @@ def get_member_auth_header(app_client):
   #Log in as that member
   login_response = app_client.post("/auth/login",
     json = {
-      "name": username,
+      "email": email,
       "password": password
     })
   #Make sure login succeded
   assert login_response.status_code == HTTPStatus.OK
 
   #Extract token and return auth header
-  acces_token = login_response.json.get("access_token")
-  assert acces_token is not None
+  access_token = login_response.json.get("access_token")
+  assert access_token is not None
 
-  return {"Authorization": f"Bearer {acces_token}"}
+  return {"Authorization": f"Bearer {access_token}"}
 
 def test_send_reminders_success(app_client, seed_data):
     with patch("app.apis.classes.send_reminder_email", return_value=True):
-        resp = app_client.post(f"/classes/{seed_data['class2_id']}/reminders",headers=get_trainer_auth_header(app_client))
+        resp = app_client.post(f"/classes/{seed_data['class2_id']}/reminders",headers=get_admin_auth_header(app_client))
         assert resp.status_code == 200
         assert resp.json == {MSG: "Reminders sent to 1 member(s). Failed: 2."}
 
 def test_send_reminders_failed(app_client, seed_data):
     with patch("app.apis.classes.send_reminder_email", return_value=False):
-        resp = app_client.post(f"/classes/{seed_data['class2_id']}/reminders",headers=get_trainer_auth_header(app_client))
+        resp = app_client.post(f"/classes/{seed_data['class2_id']}/reminders",headers=get_admin_auth_header(app_client))
         assert resp.status_code == 200
         assert resp.json == {MSG: "Reminders sent to 0 member(s). Failed: 3."}
 
@@ -161,11 +165,11 @@ def test_send_reminders_forbidden_for_member(app_client, seed_data):
 
 def test_send_reminders_class_not_found(app_client):
     invalid_class = str(ObjectId())
-    resp = app_client.post(f"/classes/{invalid_class}/reminders",headers=get_trainer_auth_header(app_client))
+    resp = app_client.post(f"/classes/{invalid_class}/reminders",headers=get_admin_auth_header(app_client))
     assert resp.status_code == 404
     
 def test_send_reminders_no_bookings(app_client, seed_data):
-    resp = app_client.post(f"/classes/{seed_data['class1_id']}/reminders", headers=get_trainer_auth_header(app_client))
+    resp = app_client.post(f"/classes/{seed_data['class1_id']}/reminders", headers=get_admin_auth_header(app_client))
     assert resp.status_code == 200
     assert resp.json == {MSG: "No members are registered for this class"}
 
