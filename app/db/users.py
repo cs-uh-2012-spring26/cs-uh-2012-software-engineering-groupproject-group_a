@@ -24,13 +24,13 @@ class UserResource:
     def __init__(self):
         self.collection = DB.get_collection(USER_COLLECTION)
 
-    def create_user(self, username: str, email: str, password_hash: str, phone: str | None = None, role: str = Role.MEMBER.value):
+    def create_user(self, username: str, email: str, password_hash: str, phone: str | None = None, role: Role = Role.MEMBER):
         user = {
             USERNAME: username,
             EMAIL: email,
             PASSWORD_HASH: password_hash,
             PHONE: phone,
-            ROLE: role,
+            ROLE: role.value,
         }
         result = self.collection.insert_one(user)
         return str(result.inserted_id)
@@ -69,7 +69,7 @@ class UserResource:
         return bool(user) and user.get(ROLE) == Role.ADMIN.value
 
     def can_create_class(self, user):
-        return is_trainer(user) or is_admin(user)
+        return self.is_trainer(user) or self.is_admin(user)
     
 
     
