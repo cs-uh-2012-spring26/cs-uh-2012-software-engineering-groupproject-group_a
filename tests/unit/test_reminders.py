@@ -97,11 +97,15 @@ def get_admin_auth_header(app_client):
   login_response = app_client.post(
     "/auth/login",
     json ={
-      "email": "admin1",
+      "email": "admin1@test.com",
       "password": "password123"
     },
   )
+  assert login_response.status_code == HTTPStatus.OK
+
   access_token = login_response.json.get("access_token")
+  assert access_token is not None
+
   return {"Authorization": f"Bearer {access_token}"}
 
 def get_member_auth_header(app_client):
@@ -134,10 +138,10 @@ def get_member_auth_header(app_client):
   assert login_response.status_code == HTTPStatus.OK
 
   #Extract token and return auth header
-  acces_token = login_response.json.get("access_token")
-  assert acces_token is not None
+  access_token = login_response.json.get("access_token")
+  assert access_token is not None
 
-  return {"Authorization": f"Bearer {acces_token}"}
+  return {"Authorization": f"Bearer {access_token}"}
 
 def test_send_reminders_success(app_client, seed_data):
     with patch("app.apis.classes.send_reminder_email", return_value=True):
