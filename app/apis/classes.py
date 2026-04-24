@@ -84,6 +84,7 @@ class_create_fields = api.model(
     trainer_name: fields.String(example = _Example_class_1[trainer_name]),
     RECURRING_TYPE_FIELD: fields.String(
         required=False,
+        enum=["daily", "weekly"],
         example="daily",
         description="Recurrence pattern: daily or weekly",
     ),
@@ -150,6 +151,18 @@ class ClassList(Resource):
       "Create Class: Forbidden",
       {MSG: fields.String("Only trainers or admins can create classes")},
     ),
+  )
+
+  @api.doc(
+    description="""
+    Create a single fitness class or a recurring class series.
+
+    Optional recurrence fields:
+    - recurrence_type: "daily" or "weekly"
+    - recurrence_end_date: ISO datetime of the last occurrence
+
+    Remove recurrence_type and recurrence_end_date lines to create a single class.
+    """
   )
   def post(self):
     #Validate that request is json
