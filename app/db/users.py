@@ -32,7 +32,7 @@ class UserResource:
             PASSWORD_HASH: password_hash,
             PHONE: phone,
             ROLE: role.value,
-            NOTIFICATION_PREFS: notification_prefs,
+            NOTIFICATION_PREFS: notification_prefs or ["email"],
         }
         result = self.collection.insert_one(user)
         return str(result.inserted_id)

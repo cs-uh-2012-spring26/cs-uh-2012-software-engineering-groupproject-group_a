@@ -271,11 +271,7 @@ class SendReminders(Resource):
     total_failed = 0
 
     for member in members:
-        prefs = member.get(NOTIFICATION_PREFS)
-        if not prefs:
-          total_failed += 1
-          continue
-
+        prefs = member.get(NOTIFICATION_PREFS) or ['email']
         reminder = ReminderData(
             recipient_email=member.get(EMAIL),
             recipient_name=member.get(USERNAME, "Member"),
@@ -287,5 +283,5 @@ class SendReminders(Resource):
         total_sent += sent
         total_failed += failed
  
-    return {MSG: f"Notifications sent: {total_sent}, Failed: {total_failed}"}, HTTPStatus.OK
+    return {MSG: f"Notifications sent: {total_sent}, Failed: {total_failed}."}, HTTPStatus.OK
  
