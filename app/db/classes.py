@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 
 from bson import ObjectId
 
+CLASS_WINDOW_DAYS = 14
 
 #Class collection name
 CLASS_COLLECTION = "classes"
@@ -32,32 +33,43 @@ class ClassResource:
     insert_result = self.collection.insert_one(new_class)
     new_class_id = insert_result.inserted_id
     return str(new_class_id)
+  
+  def parse_class_start_time(self, one_class):
+    start_time_value = one_class.get(start_time)
+    if not isinstance(start_time_value, str):
+      return None
+    try:
+      return datetime.fromisoformat(start_time_value)
+    except ValueError:
+      return None
+    
+  def is_class_within_upcoming_window(self, class_start_datetime):
+    now =datetime.now()
+    latest_allowed = now+ timedelta(days=CLASS_WINDOW_DAYS) #show classes within next 2 weeks
+    return now<= class_start_datetime<=latest_allowed
+  
+  def get_week_key(self, class_start_datetime):
+    year, week_number, _ = class_start_datetime.isocalendar()
+    return f"{year}-W{week_number}"
+
 
   def get_upcoming_classes_grouped_by_week(self):
     #get all classes from database
     classes = self.collection.find({})
     classes_list = serialize_items(list(classes))
 
-    now = datetime.now()
-    latest_allowed = now+ timedelta(days=14) #show classes within next 2 weeks
-
     weekly_classes = {}
     for one_class in classes_list:
-      start_time_value = one_class.get(start_time) #read start time of each class
-      #skip if start time is missing or invalid; inputs are already checked at class creation step and this is just a safety measure to ensure that entire system doesn't fail
-      if not isinstance(start_time_value, str):
+      class_start_datetime = self.parse_class_start_time(one_class)
+      if class_start_datetime is None:
         continue
-      try:
-        class_start_datetime = datetime.fromisoformat(start_time_value)
-      except ValueError:
-        continue #skip class if there is invalid date format, again checked for during class cretaion step
-      #include only classes in upcoming 2 weeks
-      if now<=class_start_datetime<=latest_allowed:
-        year, week_number, _ = class_start_datetime.isocalendar()
-        week_key = f"{year}-W{week_number}"
-        if week_key not in weekly_classes:
-          weekly_classes[week_key] =[]
-        weekly_classes[week_key].append(one_class)
+      if not self.is_class_within_upcoming_window(class_start_datetime):
+        continue
+      week_key = self.get_week_key(class_start_datetime)
+     
+      if week_key not in weekly_classes:
+        weekly_classes[week_key] =[]
+      weekly_classes[week_key].append(one_class)
     return weekly_classes
 
   def get_class_by_id(self, class_id: str): #get a class by its id
@@ -68,6 +80,24 @@ class ClassResource:
     class_ = self.collection.find_one({"_id": obj_id})
     return serialize_item(class_)
   
+  def has_schedule_conflict(self, location_value:str, start_datetime:datetime, end_datetime: datetime):
+    classes = self.collection.find({location: location_value})
+    for existing_class in classes:
+      existing_start_str = existing_class.get(start_time)
+      existing_end_str = existing_class.get(end_time)
+      # skip if missing values
+      if existing_start_str is None or existing_end_str is None:
+        continue
+      try:
+        existing_start = datetime.fromisoformat(existing_start_str)
+        existing_end = datetime.fromisoformat(existing_end_str)
+      except Exception:
+        continue
+      #check overlap
+      if existing_start<end_datetime and start_datetime<existing_end:
+        return True
+    return False
+
   def has_remaining_spots(self, class_id):
     class_obj = self.get_class_by_id(class_id)
     return bool(class_obj and class_obj.get(remaining_spots, 0) > 0)

@@ -1,4 +1,3 @@
-#Test for Feature 1
 #All necessary imports
 import os
 from http import HTTPStatus
@@ -8,7 +7,14 @@ import pytest
 from app import create_app
 from app.db import DB
 from app.db.users import USERNAME, EMAIL, PHONE
+from app.db.users import UserResource, Role
+from werkzeug.security import generate_password_hash
 
+TEST_PASSWORD = "password123"
+DEFAULT_CLASS_NAME = "Yoga"
+DEFAULT_LOCATION = "Studio A"
+DEFAULT_PHONE = "+97150000123"
+ADMIN_PHONE = "+97150000111"
 
 @pytest.fixture(scope ="module")
 def app_client():
@@ -29,12 +35,25 @@ def clear_classes_collection():
   classes_col.delete_many({})
 
 def get_admin_auth_header(app_client):
-  #Log in as seeded admin user and return valid JWT auth header
+  # Create admin user and return valid JWT auth header
+  user_res = UserResource()
+  unique_suffix = str(int(datetime.now().timestamp() * 1000000))
+  username = f"admin_{unique_suffix}"
+  email = f"{username}@example.com"
+  password = TEST_PASSWORD
+
+  user_res.create_user(
+    username, 
+    email, 
+    generate_password_hash(password),
+    ADMIN_PHONE,
+    role = Role.ADMIN)
+  
   login_response = app_client.post(
     "/auth/login",
     json ={
-      "email": "admin1@test.com",
-      "password": "password123"
+      "email": email,
+      "password": password
     },
   )
   #Make sure login succeded
@@ -52,7 +71,7 @@ def get_member_auth_header(app_client):
   unique_suffix = str(int(datetime.now().timestamp() * 1000000))
   username = f"member_{unique_suffix}"
   email = f"{username}@example.com"
-  password = "password123"
+  password = TEST_PASSWORD
 
   #register a new member
   register_response = app_client.post("/auth/register/member",
@@ -60,7 +79,7 @@ def get_member_auth_header(app_client):
       USERNAME : username,
       EMAIL: email,
       "password": password,
-      PHONE : "+97150000123"
+      PHONE : DEFAULT_PHONE
     },
     )
   #registration should suceed
@@ -85,120 +104,112 @@ def build_valid_class():
   class_start_time = datetime.now()+timedelta(hours=2) #Done to ensure start date is in the future and within allowed 2-week window
   class_end_time = class_start_time+timedelta(hours = 1)
   return{
-    "class_name": "Yoga",
+    "class_name": DEFAULT_CLASS_NAME,
     "start_time": class_start_time.isoformat(timespec="seconds"),
     "end_time": class_end_time.isoformat(timespec="seconds"),
-    "location": "Studio A",
+    "location": DEFAULT_LOCATION,
     "capacity": 15,
     "trainer_name": "Emily Smith"
   }
+
+def flatten_weekly_classes(weekly_classes):
+  all_classes = []
+  for classes_in_week in weekly_classes.values():
+    all_classes.extend(classes_in_week)
+  return all_classes
+
+def create_class(app_client, class_payload = None):
+  auth_headers = get_admin_auth_header(app_client)
+  if class_payload is None:
+    class_payload = build_valid_class()
+  return app_client.post("/classes/", json = class_payload, headers = auth_headers)
+
 
 #TESTS FOR FEATURE 1
 
 def test_create_class_success(app_client):
   #Main sucess scenarion for Feature 1
   #Expected behaviour would be that admin/trainer logs in, submits valid data, API creates class, API returns HTTP 200, response contains created class id
-  auth_headers = get_admin_auth_header(app_client)
-  class_payload = build_valid_class()
-
-  response = app_client.post("/classes/", json = class_payload, headers = auth_headers )
-
+  response = create_class(app_client)
+  
   assert response.status_code == HTTPStatus.OK
   assert isinstance(response.json, dict)
   assert "Class created with id" in response.json.get(MSG)
 
 def test_create_class_with_missing_class_name_fails(app_client):
-  #Validation failed; class_name is required
-  auth_headers = get_admin_auth_header(app_client)
   class_payload = build_valid_class()
   class_payload["class_name"] = ""
 
-  response = app_client.post("/classes/", json = class_payload, headers = auth_headers)
+  response = create_class(app_client, class_payload)
 
   assert response.status_code == HTTPStatus.NOT_ACCEPTABLE
   assert response.json == {MSG: "Class name is required"}
 
 def test_create_class_with_missing_start_time_fails(app_client):
-  #Validation failed; start_time is required
-  auth_headers = get_admin_auth_header(app_client)
   class_payload = build_valid_class()
   class_payload["start_time"] = ""
 
-  response = app_client.post("/classes/", json = class_payload, headers = auth_headers)
+  response = create_class(app_client, class_payload)
 
   assert response.status_code == HTTPStatus.NOT_ACCEPTABLE
   assert response.json == {MSG: "Start time is required"}
 
 def test_create_class_with_missing_end_time_fails(app_client):
-  #Validation failed; end_time is required
-  auth_headers = get_admin_auth_header(app_client)
   class_payload = build_valid_class()
   class_payload["end_time"] = ""
 
-  response = app_client.post("/classes/", json = class_payload, headers = auth_headers)
+  response = create_class(app_client, class_payload)
 
   assert response.status_code == HTTPStatus.NOT_ACCEPTABLE
   assert response.json == {MSG: "End time is required"}
 
 def test_create_class_with_missing_location_fails(app_client):
-  #Validation failed; location is required
-  auth_headers = get_admin_auth_header(app_client)
   class_payload = build_valid_class()
   class_payload["location"] = ""
 
-  response = app_client.post("/classes/", json = class_payload, headers = auth_headers)
+  response = create_class(app_client, class_payload)
 
   assert response.status_code == HTTPStatus.NOT_ACCEPTABLE
   assert response.json == {MSG: "Location is required"}
 
 def test_create_class_with_missing_trainer_name_fails(app_client):
-  #Validation failed; trainer_name is required
-  auth_headers = get_admin_auth_header(app_client)
   class_payload = build_valid_class()
   class_payload["trainer_name"] = ""
 
-  response = app_client.post("/classes/", json = class_payload, headers = auth_headers)
+  response = create_class(app_client, class_payload)
 
   assert response.status_code == HTTPStatus.NOT_ACCEPTABLE
   assert response.json == {MSG: "Trainer name is required"}
 
 
 def test_create_class_with_invalid_capacity_fails(app_client):
-  #Validation failed; invalid capacity
-  auth_headers = get_admin_auth_header(app_client)
   class_payload = build_valid_class()
   class_payload["capacity"] = 0
 
-  response = app_client.post("/classes/", json = class_payload, headers = auth_headers) 
+  response = create_class(app_client, class_payload)
 
   assert response.status_code == HTTPStatus.NOT_ACCEPTABLE
   assert response.json == {MSG: "Capacity is required"}
 
 def test_create_class_with_negative_capacity_fails(app_client):
-  #Validation failed, capacity must be a positive number
-  auth_headers = get_admin_auth_header(app_client)
   class_payload = build_valid_class()
   class_payload["capacity"] = -5
 
-  response = app_client.post("/classes/", json = class_payload, headers = auth_headers) 
+  response = create_class(app_client, class_payload)
 
   assert response.status_code == HTTPStatus.NOT_ACCEPTABLE
   assert response.json == {MSG: "Capacity is required"}
 
 def test_create_class_with_non_integer_capacity_fails(app_client):
-  #Validation failed, capacity must be an integer
-  auth_headers = get_admin_auth_header(app_client)
   class_payload = build_valid_class()
   class_payload["capacity"] = "fifteen"
 
-  response = app_client.post("/classes/", json = class_payload, headers = auth_headers) 
+  response = create_class(app_client, class_payload)
 
   assert response.status_code == HTTPStatus.NOT_ACCEPTABLE
   assert response.json == {MSG: "Capacity is required"}
 
 def test_create_class_with_end_time_before_start_time_fails(app_client):
-  #Validation failed; end_time must be after start_time
-  auth_headers = get_admin_auth_header(app_client)
   class_payload = build_valid_class()
 
   class_start_time = datetime.now()+timedelta(hours = 2) #start time is in future
@@ -208,14 +219,12 @@ def test_create_class_with_end_time_before_start_time_fails(app_client):
   class_payload["start_time"] = class_start_time.isoformat(timespec = "seconds")
   class_payload["end_time"] = class_end_time.isoformat(timespec= "seconds")
 
-  response = app_client.post("/classes/", json = class_payload, headers = auth_headers) 
+  response = create_class(app_client, class_payload)
 
   assert response.status_code == HTTPStatus.NOT_ACCEPTABLE
   assert response.json == {MSG:"End time must be after start time"}
 
 def test_create_class_with_start_time_in_past_fails(app_client):
-  #Validation failed; start_time must be in future
-  auth_headers = get_admin_auth_header(app_client)
   class_payload = build_valid_class()
 
   class_start_time = datetime.now()-timedelta(hours = 2) #start time is in past
@@ -225,14 +234,13 @@ def test_create_class_with_start_time_in_past_fails(app_client):
   class_payload["start_time"] = class_start_time.isoformat(timespec = "seconds")
   class_payload["end_time"] = class_end_time.isoformat(timespec= "seconds")
 
-  response = app_client.post("/classes/", json = class_payload, headers = auth_headers) 
+  response = create_class(app_client, class_payload)
 
   assert response.status_code == HTTPStatus.NOT_ACCEPTABLE
   assert response.json == {MSG:"Classes can only be created for upcoming 2 weeks"}
 
 def test_create_class_with_equal_start_time_and_end_time_fails(app_client):
   #Validation failed; end_time must strictly be after start_time, not equal to it
-  auth_headers = get_admin_auth_header(app_client)
   class_payload = build_valid_class()
 
   class_start_time = datetime.now()+timedelta(hours = 2) #start time is in future(as it should be)
@@ -242,15 +250,13 @@ def test_create_class_with_equal_start_time_and_end_time_fails(app_client):
   class_payload["start_time"] = class_start_time.isoformat(timespec = "seconds")
   class_payload["end_time"] = class_end_time.isoformat(timespec= "seconds")
 
-  response = app_client.post("/classes/", json = class_payload, headers = auth_headers) 
+  response = create_class(app_client, class_payload)
 
   assert response.status_code == HTTPStatus.NOT_ACCEPTABLE
   assert response.json == {MSG:"End time must be after start time"}
 
 
 def test_create_class_outside_upcoming_two_weeks_fails(app_client):
-  #Validation failed; Classes can be created only within upcoming 2 weeks
-  auth_headers = get_admin_auth_header(app_client)
   class_payload = build_valid_class()
 
   class_start_time = datetime.now() + timedelta(days = 25) #outside of allowed 2 weeks window
@@ -259,25 +265,22 @@ def test_create_class_outside_upcoming_two_weeks_fails(app_client):
   class_payload["start_time"] = class_start_time.isoformat(timespec= "seconds")
   class_payload["end_time"] = class_end_time.isoformat(timespec= "seconds")
 
-  response = app_client.post("/classes/", json = class_payload, headers = auth_headers) 
+  response = create_class(app_client, class_payload)
 
   assert response.status_code == HTTPStatus.NOT_ACCEPTABLE
   assert response.json == {MSG:"Classes can only be created for upcoming 2 weeks"}
 
 def test_create_class_with_invalid_datetime_format_fails(app_client):
-  #Validation failed; start_time and end_time must be valid ISO datetime strings
-  auth_headers = get_admin_auth_header(app_client)
   class_payload = build_valid_class()
 
   class_payload["start_time"] = "03/11/2026 08:30" #invalid date format
 
-  response = app_client.post("/classes/", json = class_payload, headers = auth_headers)
+  response = create_class(app_client, class_payload)
 
   assert response.status_code == HTTPStatus.NOT_ACCEPTABLE
   assert response.json == {MSG: "Start time and end time must be in the format YYYY-MM-DDTHH:MM:SS (e.g. 2026-03-02T08:30:00)"}
 
 def test_create_class_without_auth_fails(app_client):
-  #Test behaviour when no JWT object is provided
   class_payload = build_valid_class()
 
   response = app_client.post("/classes/", json = class_payload)
@@ -285,21 +288,18 @@ def test_create_class_without_auth_fails(app_client):
   assert response.status_code == HTTPStatus.UNAUTHORIZED
 
 def test_create_class_authenticated_member_fails(app_client):
-  #Only trainers/admins can create the class
-  auth_headers = get_member_auth_header(app_client)
+  member_auth_header = get_member_auth_header(app_client)
   class_payload = build_valid_class()
 
-  response = app_client.post("/classes/", json = class_payload, headers = auth_headers)
+  response = app_client.post("/classes/", json=class_payload, headers=member_auth_header)
 
   assert response.status_code == HTTPStatus.FORBIDDEN
   assert response.json == {MSG: "Only trainers or admins can create classes"}
 
 def test_create_class_with_overlapping_time_and_location_fails(app_client):
-  #Validation fails; no two classes can be scheduled at same place and same time
-  auth_headers = get_admin_auth_header(app_client)
   first_class_payload = build_valid_class()
 
-  first_response = app_client.post("/classes/", json = first_class_payload, headers = auth_headers)
+  first_response = create_class(app_client, first_class_payload)
 
   assert first_response.status_code == HTTPStatus.OK
 
@@ -316,7 +316,7 @@ def test_create_class_with_overlapping_time_and_location_fails(app_client):
   overlapping_class_payload["start_time"] = overlapping_start_time.isoformat(timespec="seconds")
   overlapping_class_payload["end_time"] = overlapping_end_time.isoformat(timespec="seconds")
 
-  second_response = app_client.post("/classes/", json = overlapping_class_payload, headers = auth_headers)
+  second_response = create_class(app_client, overlapping_class_payload)
 
   assert second_response.status_code == HTTPStatus.NOT_ACCEPTABLE
   assert second_response.json == {MSG: "Another class is already scheduled at this location during that time"}
@@ -334,11 +334,7 @@ def test_view_class_list_with_no_upcoming_classes(app_client):
 def test_view_class_list_returns_upcoming_classes_grouped_by_week(app_client):
   #if upcoming classes do exist, API should return them grouped by week
   
-  #Log in as admin to create a class first
-  auth_headers = get_admin_auth_header(app_client)
-  #create a valid class
-  class_payload = build_valid_class()
-  create_response = app_client.post("/classes/", json = class_payload, headers = auth_headers)
+  create_response = create_class(app_client)
 
   assert create_response.status_code == HTTPStatus.OK
 
@@ -354,27 +350,20 @@ def test_view_class_list_returns_upcoming_classes_grouped_by_week(app_client):
 
   assert len(weekly_classes)>0 #should be at least one week group
 
-  #make sure created class appears
-  all_classes = []
-  for classes_in_week in weekly_classes.values():
-    all_classes.extend(classes_in_week)
+  all_classes = flatten_weekly_classes(weekly_classes)
   
-  assert any(one_class["class_name"] == "Yoga" for one_class in all_classes)
+  assert any(one_class["class_name"] == DEFAULT_CLASS_NAME for one_class in all_classes)
 
 def test_view_class_list_includes_full_classes(app_client):
   #full classes still appear in class list, with remaining_spots = 0
   #Log in as admin to create a class first
-  auth_headers = get_admin_auth_header(app_client)
-  #create a valid class
-  class_payload = build_valid_class()
-  create_response = app_client.post("/classes/", json = class_payload, headers = auth_headers)
-
+  create_response = create_class(app_client)
   assert create_response.status_code == HTTPStatus.OK
 
   #update one class to simulate it being full
   classes_col = DB.get_collection("classes")
   classes_col.update_one(
-    {"class_name" : "Yoga"},
+    {"class_name" : DEFAULT_CLASS_NAME},
     {"$set": {"remaining_spots":0}}
     )
   #request class list
@@ -384,12 +373,10 @@ def test_view_class_list_includes_full_classes(app_client):
   assert isinstance(response.json.get(MSG), dict)
 
   weekly_classes = response.json.get(MSG)
-  all_classes = []
-  for classes_in_week in weekly_classes.values():
-    all_classes.extend(classes_in_week)
+  all_classes = flatten_weekly_classes(weekly_classes)
 
   #make sure that class is present and has remaining_spots as 0
-  matching_classes = [one_class for one_class in all_classes if one_class["class_name"] == "Yoga"]
+  matching_classes = [one_class for one_class in all_classes if one_class["class_name"] == DEFAULT_CLASS_NAME]
 
   assert len(matching_classes)>0
   assert matching_classes[0]["remaining_spots"] == 0
