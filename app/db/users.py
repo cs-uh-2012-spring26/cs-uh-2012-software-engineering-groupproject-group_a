@@ -12,6 +12,7 @@ EMAIL = "email"
 PASSWORD_HASH = "password_hash"
 PHONE = "phone"
 ROLE = "role" #"member" ,"trainer", "admin"
+NOTIFICATION_PREFS = "notification_prefs"
 
 class Role(str, Enum):
     MEMBER = "member"
@@ -24,13 +25,14 @@ class UserResource:
     def __init__(self):
         self.collection = DB.get_collection(USER_COLLECTION)
 
-    def create_user(self, username: str, email: str, password_hash: str, phone: str | None = None, role: Role = Role.MEMBER):
+    def create_user(self, username: str, email: str, password_hash: str, phone: str | None = None, role: Role = Role.MEMBER, notification_prefs=None):
         user = {
             USERNAME: username,
             EMAIL: email,
             PASSWORD_HASH: password_hash,
             PHONE: phone,
             ROLE: role.value,
+            NOTIFICATION_PREFS: notification_prefs or ["email"],
         }
         result = self.collection.insert_one(user)
         return str(result.inserted_id)
