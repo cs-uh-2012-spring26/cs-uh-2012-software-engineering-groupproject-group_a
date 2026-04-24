@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
+from app.services.email import send_reminder_email
 
 @dataclass
 class ReminderData:
@@ -16,14 +17,18 @@ class BaseNotifier(ABC):
 
 class EmailNotifier(BaseNotifier):
     def send(self, reminder: ReminderData):
-        from app.services.email import send_reminder_email
-        return send_reminder_email(
-            recipient_email=reminder.recipient_email,
-            recipient_name=reminder.recipient_name,
-            class_name=reminder.class_name,
-            start_time=reminder.start_time,
-            location=reminder.location,
-        )
+        if not reminder.recipient_email:
+            return False
+        try:
+            return send_reminder_email(
+                recipient_email=reminder.recipient_email,
+                recipient_name=reminder.recipient_name,
+                class_name=reminder.class_name,
+                start_time=reminder.start_time,
+                location=reminder.location,
+            )
+        except Exception:
+            return False
     
 class NotificationService:
     def __init__(self):
