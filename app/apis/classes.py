@@ -2,10 +2,11 @@ from flask_restx import Namespace, Resource, fields
 from app.apis import MSG
 from app.db.classes import ClassResource
 from app.db.classes import class_name, start_time, end_time, location, capacity, remaining_spots, trainer_name
-from app.db.users import UserResource, ROLE, USERNAME, EMAIL, PHONE
+from app.db.users import UserResource, ROLE, USERNAME, EMAIL, PHONE, NOTIFICATION_PREFS
 from app.db.bookings import BookingResource, USER_ID
 from app.services.email import send_reminder_email
-from app.services.classes import can_user_create_class, create_class_with_validation 
+from app.services.notifications import NotificationService, ReminderData
+from app.services.classes import can_user_create_class, create_class_with_validation, validate_class
 
 
 from http import HTTPStatus
@@ -24,6 +25,24 @@ def validate_class_creator_access():
   if not can_user_create_class(user_id):
     return {MSG: "Only trainers or admins can create classes"}, HTTPStatus.FORBIDDEN
   return None
+
+def validate_view_bookings_access():
+  user_id = get_jwt_identity()
+  if not can_user_create_class(user_id):
+    return {MSG: "Only trainers or admins can view class members"}, HTTPStatus.FORBIDDEN
+  return None
+  
+def validate_send_reminders_access():
+  user_id = get_jwt_identity()
+  if not can_user_create_class(user_id):
+    return {MSG: "Only trainers or admins can send reminders"}, HTTPStatus.FORBIDDEN
+  return None
+
+def get_valid_class(class_id):
+   cls = validate_class(class_id)
+   if cls is None:
+      return None, ({MSG: "Class not found"}, HTTPStatus.NOT_FOUND)
+   return cls, None
 
 def extract_class_data(data):
   return{
@@ -160,6 +179,8 @@ class ClassList(Resource):
     if creation_error:
        return {MSG: creation_error}, HTTPStatus.NOT_ACCEPTABLE
     return {MSG:f"Class created with id {class_id}"}, HTTPStatus.OK
+
+
 @api.route("/<string:class_id>/members")
 class ClassMembers(Resource):
   @jwt_required()
@@ -198,20 +219,14 @@ class ClassMembers(Resource):
       api.model("ClassMembersNotFound", {MSG: fields.String(example="Class not found")}),
   )
   def get(self, class_id: str):
-      # authorize trainer
-      user_id = get_jwt_identity()
-      user_res = UserResource()
-      user = user_res.get_user_by_id(user_id)
-
-      if user is None or user.get(ROLE) not in ("trainer", "admin"):
-          return {MSG: "Only trainers or admins can view class members"}, HTTPStatus.FORBIDDEN
-
-      # ensure class exists
-      class_res = ClassResource()
-      cls = class_res.get_class_by_id(class_id)
-      if cls is None:
-          return {MSG: "Class not found"}, HTTPStatus.NOT_FOUND
-
+      access_error = validate_view_bookings_access()
+      if access_error:
+        return access_error
+    
+      cls, error = get_valid_class(class_id)
+      if error is not None:
+        return error
+      
       # get bookings for the class
       booking_res = BookingResource()
       bookings = booking_res.get_class_bookings(class_id)
@@ -269,18 +284,13 @@ class SendReminders(Resource):
       ),
   )
   def post(self, class_id: str):
-    # Authorize: trainer or admin only
-    user_id = get_jwt_identity()
-    user_res = UserResource()
-    user = user_res.get_user_by_id(user_id)
-    if user is None or user.get(ROLE) not in ("trainer", "admin"):
-      return {MSG: "Only trainers or admins can send reminders"}, HTTPStatus.FORBIDDEN
-    
-    # Ensure class exists
-    class_res = ClassResource()
-    cls = class_res.get_class_by_id(class_id)
-    if cls is None:
-      return {MSG: "Class not found"}, HTTPStatus.NOT_FOUND
+    access_error = validate_send_reminders_access()
+    if access_error:
+      return access_error
+
+    cls, error = get_valid_class(class_id)
+    if error:
+      return error
     
     # Fetch all bookings for the class
     booking_res = BookingResource()
