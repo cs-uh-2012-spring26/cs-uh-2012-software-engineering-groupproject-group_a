@@ -9,10 +9,14 @@ CLASS_WINDOW_ERROR = "Classes can only be created for upcoming 2 weeks"
 CLASS_END_TIME_ERROR = "End time must be after start time"
 CLASS_OVERLAP_ERROR = "Another class is already scheduled at this location during that time"
 
-def can_user_create_class(user_id):
+def user_has_management_access(user_id):
   user_res = UserResource()
   user = user_res.get_user_by_id(user_id)
-  return user_res.can_create_class(user)
+  return user_res.has_management_access(user)
+
+def validate_class(class_id):
+  class_res = ClassResource()
+  return class_res.get_class_by_id(class_id)
 
 def parse_class_datetimes(class_data):
   try:

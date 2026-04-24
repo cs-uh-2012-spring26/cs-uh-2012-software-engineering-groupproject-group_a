@@ -6,7 +6,7 @@ from app.db.users import UserResource, ROLE, USERNAME, EMAIL, PHONE, NOTIFICATIO
 from app.db.bookings import BookingResource, USER_ID
 from app.services.email import send_reminder_email
 from app.services.notifications import NotificationService, ReminderData
-from app.services.classes import can_user_create_class, create_class_with_validation, validate_class
+from app.services.classes import user_has_management_access, create_class_with_validation, validate_class
 
 
 from http import HTTPStatus
@@ -20,22 +20,10 @@ def validate_json_body(data):
     return {MSG: "Request body must be JSON"}, HTTPStatus.NOT_ACCEPTABLE
   return None
 
-def validate_class_creator_access():
+def validate_management_access(message):
   user_id = get_jwt_identity()
-  if not can_user_create_class(user_id):
-    return {MSG: "Only trainers or admins can create classes"}, HTTPStatus.FORBIDDEN
-  return None
-
-def validate_view_bookings_access():
-  user_id = get_jwt_identity()
-  if not can_user_create_class(user_id):
-    return {MSG: "Only trainers or admins can view class members"}, HTTPStatus.FORBIDDEN
-  return None
-  
-def validate_send_reminders_access():
-  user_id = get_jwt_identity()
-  if not can_user_create_class(user_id):
-    return {MSG: "Only trainers or admins can send reminders"}, HTTPStatus.FORBIDDEN
+  if not user_has_management_access(user_id):
+    return {MSG: message}, HTTPStatus.FORBIDDEN
   return None
 
 def get_valid_class(class_id):
@@ -163,7 +151,7 @@ class ClassList(Resource):
       return json_validation_error
 
     #authorize only trainer/admin roles
-    access_error = validate_class_creator_access()
+    access_error = validate_management_access("Only trainers or admins can create classes")
     if access_error:
       return access_error
     #obtain class information
@@ -219,7 +207,7 @@ class ClassMembers(Resource):
       api.model("ClassMembersNotFound", {MSG: fields.String(example="Class not found")}),
   )
   def get(self, class_id: str):
-      access_error = validate_view_bookings_access()
+      access_error = validate_management_access("Only trainers or admins can view class members")
       if access_error:
         return access_error
     
@@ -284,7 +272,7 @@ class SendReminders(Resource):
       ),
   )
   def post(self, class_id: str):
-    access_error = validate_send_reminders_access()
+    access_error = validate_management_access("Only trainers or admins can send reminders")
     if access_error:
       return access_error
 

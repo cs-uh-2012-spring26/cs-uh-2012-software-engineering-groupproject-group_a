@@ -70,7 +70,7 @@ class UserResource:
     def is_admin(self, user):
         return bool(user) and user.get(ROLE) == Role.ADMIN.value
 
-    def can_create_class(self, user):
+    def has_management_access(self, user):
         return self.is_trainer(user) or self.is_admin(user)
     
 
