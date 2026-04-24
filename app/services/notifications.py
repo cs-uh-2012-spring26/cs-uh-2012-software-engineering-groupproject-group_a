@@ -16,7 +16,7 @@ class BaseNotifier(ABC):
 
 class EmailNotifier(BaseNotifier):
     def send(self, reminder: ReminderData):
-        from email import send_reminder_email
+        from app.services.email import send_reminder_email
         return send_reminder_email(
             recipient_email=reminder.recipient_email,
             recipient_name=reminder.recipient_name,
@@ -29,16 +29,16 @@ class NotificationService:
     def __init__(self):
         self._notifiers: dict[str, BaseNotifier] =  {"email": EmailNotifier(),}
 
-        def notify(self, reminder: ReminderData, prefs: list[str]):
-            sent = 0
-            failed = 0
-            for channel in prefs:
-                notifier = self._notifiers.get(channel)
-                if notifier is None:
-                    continue
-                if notifier.send(reminder):
-                    sent += 1
-                else:
-                    failed += 1
-            return sent, failed
+    def notify(self, reminder: ReminderData, prefs: list[str]):
+        sent = 0
+        failed = 0
+        for channel in prefs:
+            notifier = self._notifiers.get(channel)
+            if notifier is None:
+                continue
+            if notifier.send(reminder):
+                sent += 1
+            else:
+                failed += 1
+        return sent, failed
 
