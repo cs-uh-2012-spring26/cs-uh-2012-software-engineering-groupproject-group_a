@@ -7,7 +7,7 @@ from app.db.bookings import BookingResource, USER_ID
 from app.services.email import send_reminder_email
 from app.services.notifications import NotificationService, ReminderData
 from app.services.classes import user_has_management_access, create_class_with_validation, validate_class
-
+from app.services.bookings import get_class_members
 
 from http import HTTPStatus
 from flask import request
@@ -215,33 +215,15 @@ class ClassMembers(Resource):
       if error is not None:
         return error
       
-      # get bookings for the class
-      booking_res = BookingResource()
-      bookings = booking_res.get_class_bookings(class_id)
-
-      # loop bookings to fetch user records
-      result = []
-      seen = set()
-
-      for booking in bookings:
-          member_id = booking.get(USER_ID)
-          if not isinstance(member_id, str):
-              continue
-
-          if member_id in seen:
-              continue
-          seen.add(member_id)
-
-          member = user_res.get_user_by_id(member_id)
-          if member is None:
-              continue
-
-          result.append({
-              "name": member.get(USERNAME),
-              "email": member.get(EMAIL),
-              "phone": member.get(PHONE),
-          })
-
+      members = get_class_members(class_id)
+      result = [
+        {
+            "name": member.get(USERNAME),
+            "email": member.get(EMAIL),
+            "phone": member.get(PHONE),
+        }
+        for member in members
+      ]
       return {MSG: result}, HTTPStatus.OK
   
 @api.route("/<string:class_id>/reminders")
@@ -280,49 +262,26 @@ class SendReminders(Resource):
     if error:
       return error
     
-    # Fetch all bookings for the class
-    booking_res = BookingResource()
-    bookings = booking_res.get_class_bookings(class_id)
-    if not bookings:
-      return {MSG: "No members are registered for this class"}, HTTPStatus.OK   
-    
-    class_name_value = cls.get(class_name, "")
-    start_time_value = cls.get(start_time, "")
-    location_value   = cls.get(location, "")
+    members = get_class_members(class_id)
+    if not members:
+      return {MSG: "No members are registered for this class"}, HTTPStatus.OK
 
-    sent   = 0
-    failed = 0
-    seen = set()
+    notification_service = NotificationService()
+    total_sent   = 0
+    total_failed = 0
+
+    for member in members:
+        reminder = ReminderData(
+            recipient_email=member.get(EMAIL),
+            recipient_name=member.get(USERNAME),
+            class_name=cls.get(class_name, ""),
+            start_time=cls.get(start_time, ""),
+            location=cls.get(location, ""),
+        )
+        prefs = member.get(NOTIFICATION_PREFS) or ["email"]
+        sent, failed = notification_service.notify(reminder, prefs)
+        total_sentsent   += sent
+        total_failed += failed
  
-    for booking in bookings:
-      member_id = booking.get(USER_ID)
-      if not isinstance(member_id, str) or member_id in seen:
-          continue
-      seen.add(member_id)
- 
-      member = user_res.get_user_by_id(member_id)
-      if member is None:
-          failed += 1
-          continue
- 
-      member_email = member.get(EMAIL)
-      member_name  = member.get(USERNAME, "Member")
- 
-      if not member_email:
-          failed += 1
-          continue
- 
-      success = send_reminder_email(
-          recipient_email=member_email,
-          recipient_name=member_name,
-          class_name=class_name_value,
-          start_time=start_time_value,
-          location=location_value,
-      )
-      if success:
-          sent += 1
-      else:
-          failed += 1
- 
-    return {MSG: f"Reminders sent to {sent} member(s). Failed: {failed}."}, HTTPStatus.OK
+    return {MSG: f"Reminders sent to {total_sent} member(s). Failed: {total_failed}."}, HTTPStatus.OK
  
