@@ -68,6 +68,10 @@ def parse_series_end_date(class_data, first_start: datetime):
 
     return series_end
 
+def is_class_in_future(cls):
+  class_start = parse_class_start_time(cls)
+  if class_start is None or class_start <= datetime.now():
+    return False
 
 def create_class_with_validation(class_data):
   parsed_datetimes = parse_class_datetimes(class_data)
