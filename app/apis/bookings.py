@@ -1,7 +1,7 @@
 from flask_restx import Namespace, Resource, fields
 from app.apis import MSG
-from app.db.classes import ClassResource, remaining_spots
-from app.db.bookings import BookingResource, CLASS_ID, BOOKING_DATETIME
+from app.db.bookings import CLASS_ID, BOOKING_DATETIME, BookingResource
+from app.db.classes import ClassResource
 from http import HTTPStatus
 from flask import request
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -54,8 +54,7 @@ class BookClass(Resource):
         api.model("BookClassNotFound", {MSG: fields.String}),
     )
     def post(self):
-        data = request.json 
-        class_id = data.get(CLASS_ID) #get class,user id from request json body
+        class_id = request.json.get(CLASS_ID) #get class,user id from request json body
         user_id = get_jwt_identity()
 
         class_res = ClassResource()
@@ -72,7 +71,7 @@ class BookClass(Resource):
             return {MSG: "You have already booked this class"}, HTTPStatus.BAD_REQUEST
 
         #check if full
-        if cls.get(remaining_spots, 0) <= 0:
+        if not class_res.has_remaining_spots(class_id):
             return {MSG: "Class is full"}, HTTPStatus.BAD_REQUEST
 
         #decrement remaining spots atomically
