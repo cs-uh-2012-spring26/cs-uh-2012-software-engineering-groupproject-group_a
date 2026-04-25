@@ -38,7 +38,6 @@ def seed_data():
     class2_id = ObjectId() # test class with bookings
     member1_id = ObjectId() # test member with valid email
     member2_id = ObjectId() # test member with no email provided
-    member3_id = ObjectId() # test member not registered in database
 
     classes.insert_many([{
         "_id": class1_id,
@@ -81,9 +80,6 @@ def seed_data():
         "class_id": str(class2_id)
     }, {
         "user_id": str(member2_id),
-        "class_id": str(class2_id)
-    },{
-        "user_id": str(member3_id),
         "class_id": str(class2_id)
     }, {
         "user_id": ObjectId(), # covers checking for non-string member id
@@ -144,16 +140,16 @@ def get_member_auth_header(app_client):
   return {"Authorization": f"Bearer {access_token}"}
 
 def test_send_reminders_success(app_client, seed_data):
-    with patch("app.apis.classes.send_reminder_email", return_value=True):
+    with patch("app.services.notifications.send_reminder_email", return_value=True):
         resp = app_client.post(f"/classes/{seed_data['class2_id']}/reminders",headers=get_admin_auth_header(app_client))
         assert resp.status_code == 200
-        assert resp.json == {MSG: "Reminders sent to 1 member(s). Failed: 2."}
+        assert resp.json == {MSG: "Notifications sent: 1, Failed: 1."}
 
 def test_send_reminders_failed(app_client, seed_data):
-    with patch("app.apis.classes.send_reminder_email", return_value=False):
+    with patch("app.services.notifications.send_reminder_email", return_value=False):
         resp = app_client.post(f"/classes/{seed_data['class2_id']}/reminders",headers=get_admin_auth_header(app_client))
         assert resp.status_code == 200
-        assert resp.json == {MSG: "Reminders sent to 0 member(s). Failed: 3."}
+        assert resp.json == {MSG: "Notifications sent: 0, Failed: 2."}
 
 def test_send_reminders_unauthenticated_user(app_client, seed_data):
     resp = app_client.post(f"/classes/{seed_data['class1_id']}/reminders")

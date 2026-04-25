@@ -2,16 +2,73 @@ from flask_restx import Namespace, Resource, fields
 from app.apis import MSG
 from app.db.classes import ClassResource
 from app.db.classes import class_name, start_time, end_time, location, capacity, remaining_spots, trainer_name
-from app.db.users import UserResource, ROLE, USERNAME, EMAIL, PHONE
+from app.db.users import UserResource, ROLE, USERNAME, EMAIL, PHONE, NOTIFICATION_PREFS
 from app.db.bookings import BookingResource, USER_ID
 from app.services.email import send_reminder_email
+from app.services.notifications import NotificationService, ReminderData
+from app.services.classes import user_has_management_access, create_class_with_validation, validate_class, create_recurring_classes_with_validation
+from app.services.classes import RECURRING_TYPE_FIELD, RECURRING_END_DATE_FIELD
+from app.services.bookings import get_class_members
 
 from http import HTTPStatus
 from flask import request
-from datetime import datetime, timedelta
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 api = Namespace("classes", description="Endpoint for creating fitness classes")
+
+def validate_json_body(data):
+  if data is None or not isinstance(data, dict):
+    return {MSG: "Request body must be JSON"}, HTTPStatus.NOT_ACCEPTABLE
+  return None
+
+def validate_management_access(message):
+  user_id = get_jwt_identity()
+  if not user_has_management_access(user_id):
+    return {MSG: message}, HTTPStatus.FORBIDDEN
+  return None
+
+def get_valid_class(class_id):
+   cls = validate_class(class_id)
+   if cls is None:
+      return None, ({MSG: "Class not found"}, HTTPStatus.NOT_FOUND)
+   return cls, None
+
+def extract_class_data(data):
+  return{
+    class_name: data.get(class_name),
+    start_time: data.get(start_time),
+    end_time: data.get(end_time),
+    location: data.get(location),
+    capacity: data.get(capacity),
+    trainer_name: data.get(trainer_name),
+    RECURRING_TYPE_FIELD: data.get(RECURRING_TYPE_FIELD),
+    RECURRING_END_DATE_FIELD: data.get(RECURRING_END_DATE_FIELD),
+  }  
+
+def validate_required_string(value, error_message):
+  if not isinstance(value, str) or not value.strip():
+    return {MSG: error_message}, HTTPStatus.NOT_ACCEPTABLE
+  return None
+
+def validate_positive_int(value, error_message):
+  if not isinstance(value, int) or value<=0:
+    return {MSG: error_message}, HTTPStatus.NOT_ACCEPTABLE
+  return None
+
+def validate_class_data(class_data):
+  required_string_fields = [
+    (class_name, "Class name is required"), 
+    (start_time, "Start time is required"),
+    (end_time, "End time is required"),
+    (location, "Location is required"),
+    (trainer_name, "Trainer name is required")
+  ]
+  for field, error_message in required_string_fields:
+    validation_error = validate_required_string(class_data[field], error_message)
+    if validation_error:
+      return validation_error
+  return validate_positive_int(class_data[capacity], "Capacity is required")
+
 #Example class
 _Example_class_1={
   class_name: "Yoga",
@@ -30,6 +87,17 @@ class_create_fields = api.model(
     location: fields.String(example = _Example_class_1[location]),
     capacity: fields.Integer(example = _Example_class_1[capacity]),
     trainer_name: fields.String(example = _Example_class_1[trainer_name]),
+    RECURRING_TYPE_FIELD: fields.String(
+        required=False,
+        enum=["daily", "weekly"],
+        example="daily",
+        description="Recurrence pattern: daily or weekly",
+    ),
+    RECURRING_END_DATE_FIELD: fields.String(
+        required=False,
+        example="2026-03-16T08:30:00",
+        description="Last date to generate recurring classes (ISO format).",
+    ),
   },
 )
 class_list_fields = api.model(
@@ -58,7 +126,7 @@ class ClassList(Resource):
     class_resource = ClassResource()
     weekly_classes = class_resource.get_upcoming_classes_grouped_by_week()
     #If there are no upcoming classes return a message
-    if len(weekly_classes) == 0:
+    if not weekly_classes:
       return {MSG: "No upcoming classes available"}, HTTPStatus.OK
     return {MSG: weekly_classes}, HTTPStatus.OK
   
@@ -89,71 +157,54 @@ class ClassList(Resource):
       {MSG: fields.String("Only trainers or admins can create classes")},
     ),
   )
+
+  @api.doc(
+    description="""
+    Create a single fitness class or a recurring class series.
+
+    Optional recurrence fields:
+    - recurrence_type: "daily" or "weekly"
+    - recurrence_end_date: ISO datetime of the last occurrence
+
+    Remove recurrence_type and recurrence_end_date lines to create a single class.
+    """
+  )
   def post(self):
-    if request.json is None or not isinstance(request.json, dict):
-      return {MSG: "Requets body must be JSON"}, HTTPStatus.NOT_ACCEPTABLE
+    #Validate that request is json
+    data = request.json
+    json_validation_error = validate_json_body(data)
+    if json_validation_error:
+      return json_validation_error
 
     #authorize only trainer/admin roles
-    user_id = get_jwt_identity()
-    user_res = UserResource()
-    user = user_res.get_user_by_id(user_id)
-    if  not user_res.can_create_class(user):
-      return {MSG: "Only trainers or admins can create classes"}, HTTPStatus.FORBIDDEN
+    access_error = validate_management_access("Only trainers or admins can create classes")
+    if access_error:
+      return access_error
+    #obtain class information
+    class_data = extract_class_data(data)
 
-    class_name_value = request.json.get(class_name)
-    start_time_value = request.json.get(start_time)
-    end_time_value = request.json.get(end_time)
-    location_value = request.json.get(location)
-    capacity_value = request.json.get(capacity)
-    trainer_name_value = request.json.get(trainer_name)
     #Check for value types and make sure all values are non-empty
-    if not isinstance(class_name_value, str) or len(class_name_value.strip())==0:
-      return {MSG: "Class name is required"}, HTTPStatus.NOT_ACCEPTABLE
-    if not isinstance(start_time_value, str) or len(start_time_value.strip())==0:
-      return {MSG: "Start time is required"}, HTTPStatus.NOT_ACCEPTABLE
-    if not isinstance(end_time_value, str) or len(end_time_value.strip())==0:
-      return {MSG: "End time is required"}, HTTPStatus.NOT_ACCEPTABLE
-    if not isinstance(location_value, str) or len(location_value.strip())==0:
-      return {MSG: "Location is required"}, HTTPStatus.NOT_ACCEPTABLE
-    if not isinstance(trainer_name_value, str) or len(trainer_name_value.strip())==0:
-      return {MSG: "Trainer name is required"}, HTTPStatus.NOT_ACCEPTABLE
-    if not isinstance(capacity_value, int) or capacity_value<=0:
-      return {MSG: "Capacity is required"}, HTTPStatus.NOT_ACCEPTABLE
+    validation_error = validate_class_data(class_data)
+    if validation_error:
+      return validation_error
     
-    #parse start and end time as datetime objects
-    try:
-      start_datetime = datetime.fromisoformat(start_time_value)
-      end_datetime = datetime.fromisoformat(end_time_value)
-    except Exception:
-      return {MSG: "Start time and end time must be in the format YYYY-MM-DDTHH:MM:SS (e.g. 2026-03-02T08:30:00)"}, HTTPStatus.NOT_ACCEPTABLE
-    #classes can be booked only within upcoming 2 weeks
-    now = datetime.now() #current local time
-    latest_allowed = now+timedelta(days=14) #latest start date permitted
-    if start_datetime<now or start_datetime>latest_allowed:
-      return {MSG: "Classes can only be created for upcoming 2 weeks"}, HTTPStatus.NOT_ACCEPTABLE
-    #end time must be after start time; class cannot start and end at same time
-    if end_datetime<=start_datetime:
-      return {MSG:"End time must be after start time"}, HTTPStatus.NOT_ACCEPTABLE
-    
-    #Prevent class overlap: two classes at same time at same location
-    existing_classes_by_week = ClassResource().get_upcoming_classes_grouped_by_week()
-    for classes_in_week in existing_classes_by_week.values():
-      for existing_class in classes_in_week:
-        if existing_class.get(location)!=location_value:
-          continue
-        try:
-          existing_start = datetime.fromisoformat(existing_class.get(start_time))
-          existing_end = datetime.fromisoformat(existing_class.get(end_time))
-        except Exception:
-          continue
-        if existing_start< end_datetime and start_datetime<existing_end:
-          return {MSG: "Another class is already scheduled at this location during that time"}, HTTPStatus.NOT_ACCEPTABLE
-        
+    recurrence_type = class_data.get(RECURRING_TYPE_FIELD)
 
-    class_resource = ClassResource()
-    class_id = class_resource.create_class(class_name_value, start_time_value, end_time_value, location_value, capacity_value, trainer_name_value)
-    return {MSG: f"Class created with id {class_id}"}, HTTPStatus.OK
+    if recurrence_type:
+      #Recurring series
+      class_ids, error = create_recurring_classes_with_validation(class_data)
+      if error:
+        return {MSG: error}, HTTPStatus.NOT_ACCEPTABLE
 
+      return {
+        MSG: f"Recurring classes created with ids {class_ids}"
+      }, HTTPStatus.OK
+
+    #Single class - create class through service layer
+    class_id, creation_error = create_class_with_validation(class_data)
+    if creation_error:
+       return {MSG: creation_error}, HTTPStatus.NOT_ACCEPTABLE
+    return {MSG:f"Class created with id {class_id}"}, HTTPStatus.OK
 
 @api.route("/<string:class_id>/members")
 class ClassMembers(Resource):
@@ -193,47 +244,23 @@ class ClassMembers(Resource):
       api.model("ClassMembersNotFound", {MSG: fields.String(example="Class not found")}),
   )
   def get(self, class_id: str):
-      # authorize trainer
-      user_id = get_jwt_identity()
-      user_res = UserResource()
-      user = user_res.get_user_by_id(user_id)
-
-      if user is None or user.get(ROLE) not in ("trainer", "admin"):
-          return {MSG: "Only trainers or admins can view class members"}, HTTPStatus.FORBIDDEN
-
-      # ensure class exists
-      class_res = ClassResource()
-      cls = class_res.get_class_by_id(class_id)
-      if cls is None:
-          return {MSG: "Class not found"}, HTTPStatus.NOT_FOUND
-
-      # get bookings for the class
-      booking_res = BookingResource()
-      bookings = booking_res.get_class_bookings(class_id)
-
-      # loop bookings to fetch user records
-      result = []
-      seen = set()
-
-      for booking in bookings:
-          member_id = booking.get(USER_ID)
-          if not isinstance(member_id, str):
-              continue
-
-          if member_id in seen:
-              continue
-          seen.add(member_id)
-
-          member = user_res.get_user_by_id(member_id)
-          if member is None:
-              continue
-
-          result.append({
-              "name": member.get(USERNAME),
-              "email": member.get(EMAIL),
-              "phone": member.get(PHONE),
-          })
-
+      access_error = validate_management_access("Only trainers or admins can view class members")
+      if access_error:
+        return access_error
+    
+      cls, error = get_valid_class(class_id)
+      if error is not None:
+        return error
+      
+      members = get_class_members(class_id)
+      result = [
+        {
+            "name": member.get(USERNAME),
+            "email": member.get(EMAIL),
+            "phone": member.get(PHONE),
+        }
+        for member in members
+      ]
       return {MSG: result}, HTTPStatus.OK
   
 @api.route("/<string:class_id>/reminders")
@@ -264,62 +291,34 @@ class SendReminders(Resource):
       ),
   )
   def post(self, class_id: str):
-    # Authorize: trainer or admin only
-    user_id = get_jwt_identity()
-    user_res = UserResource()
-    user = user_res.get_user_by_id(user_id)
-    if user is None or user.get(ROLE) not in ("trainer", "admin"):
-      return {MSG: "Only trainers or admins can send reminders"}, HTTPStatus.FORBIDDEN
-    
-    # Ensure class exists
-    class_res = ClassResource()
-    cls = class_res.get_class_by_id(class_id)
-    if cls is None:
-      return {MSG: "Class not found"}, HTTPStatus.NOT_FOUND
-    
-    # Fetch all bookings for the class
-    booking_res = BookingResource()
-    bookings = booking_res.get_class_bookings(class_id)
-    if not bookings:
-      return {MSG: "No members are registered for this class"}, HTTPStatus.OK   
-    
-    class_name_value = cls.get(class_name, "")
-    start_time_value = cls.get(start_time, "")
-    location_value   = cls.get(location, "")
+    access_error = validate_management_access("Only trainers or admins can send reminders")
+    if access_error:
+      return access_error
 
-    sent   = 0
-    failed = 0
-    seen = set()
+    cls, error = get_valid_class(class_id)
+    if error:
+      return error
+    
+    members = get_class_members(class_id)
+    if not members:
+      return {MSG: "No members are registered for this class"}, HTTPStatus.OK
+
+    notification_service = NotificationService()
+    total_sent   = 0
+    total_failed = 0
+
+    for member in members:
+        prefs = member.get(NOTIFICATION_PREFS) or ['email']
+        reminder = ReminderData(
+            recipient_email=member.get(EMAIL),
+            recipient_name=member.get(USERNAME, "Member"),
+            class_name=cls.get(class_name, ""),
+            start_time=cls.get(start_time, ""),
+            location=cls.get(location, ""),
+        )
+        sent, failed = notification_service.notify(reminder, prefs)
+        total_sent += sent
+        total_failed += failed
  
-    for booking in bookings:
-      member_id = booking.get(USER_ID)
-      if not isinstance(member_id, str) or member_id in seen:
-          continue
-      seen.add(member_id)
- 
-      member = user_res.get_user_by_id(member_id)
-      if member is None:
-          failed += 1
-          continue
- 
-      member_email = member.get(EMAIL)
-      member_name  = member.get(USERNAME, "Member")
- 
-      if not member_email:
-          failed += 1
-          continue
- 
-      success = send_reminder_email(
-          recipient_email=member_email,
-          recipient_name=member_name,
-          class_name=class_name_value,
-          start_time=start_time_value,
-          location=location_value,
-      )
-      if success:
-          sent += 1
-      else:
-          failed += 1
- 
-    return {MSG: f"Reminders sent to {sent} member(s). Failed: {failed}."}, HTTPStatus.OK
+    return {MSG: f"Notifications sent: {total_sent}, Failed: {total_failed}."}, HTTPStatus.OK
  
