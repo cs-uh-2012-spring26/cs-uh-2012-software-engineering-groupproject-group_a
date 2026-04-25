@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
-from app.services.email import send_reminder_email
-from app.services.telegram import send_reminder_telegram
 
 @dataclass
 class ReminderData:
@@ -20,6 +18,7 @@ class BaseNotifier(ABC):
 
 class EmailNotifier(BaseNotifier):
     def send(self, reminder: ReminderData, contact_details: dict):
+        from app.services.email import send_reminder_email
         email = contact_details.get("email")
         if not email:
             return False
@@ -36,11 +35,12 @@ class EmailNotifier(BaseNotifier):
         
 class TelegramNotifier(BaseNotifier):
     def send(self, reminder: ReminderData, contact_details: dict):
+        from app.services.telegram import send_reminder_telegram
         chat_id = contact_details.get("telegram")
         if not chat_id:
             return False
         try:
-            return send_reminder_email(
+            return send_reminder_telegram(
                 chat_id=chat_id,
                 recipient_name=reminder.recipient_name,
                 class_name=reminder.class_name,

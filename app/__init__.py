@@ -2,6 +2,7 @@ from app.apis.hello import api as hello_ns
 from app.apis.classes import api as classes_ns
 from app.apis.auth import api as auth_ns
 from app.apis.bookings import api as bookings_ns
+from app.apis.notifications import api as notifications_ns
 from werkzeug.security import generate_password_hash
 from app.db.users import UserResource, Role
 from app.config import Config
@@ -55,6 +56,7 @@ def create_app():
     api.add_namespace(classes_ns)
     api.add_namespace(auth_ns)
     api.add_namespace(bookings_ns)
+    api.add_namespace(notifications_ns)
 
     #error handlers
     @api.errorhandler(NoAuthorizationError) #handle missing Authorization header
