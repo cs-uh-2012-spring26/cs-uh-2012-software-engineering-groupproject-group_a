@@ -12,4 +12,4 @@ boto3==1.39.8
 python-dateutil==2.9.0
 pytest
 pytest-mock
-mongomock
+mongomockrequests
