@@ -150,5 +150,5 @@ The Sprint 3B class diagram introduces an explicit domain model (User with Membe
 
 >> ## Team member responsibilities:
 >>  - Isumi: Refactors for Design Principle Violations 3.1.1, 3.1.2, 3.4.1 & Code Smells 4.1.1, 4.2.1, 4.5.1, Feature 6 Create recurring classes implementation, Class diagram creation
->>  - Nada: 
+>>  - Nada: Refactors for Design Principle violations 3.1.3, 3.1.4, 3.2.1, 3.3.2, 3.4.3  & Code Smells 4.1.2, 4.1.3 and 4.4.2., Tests for Feature 6 Create recurring classes implementation and CI.
 >>  - Rujul: 
