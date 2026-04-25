@@ -14,6 +14,8 @@ PHONE = "phone"
 ROLE = "role" #"member" ,"trainer", "admin"
 NOTIFICATION_PREFS = "notification_prefs"
 
+VALID_CHANNELS = {"email", "telegram"}
+
 class Role(str, Enum):
     MEMBER = "member"
     TRAINER = "trainer"
@@ -32,7 +34,7 @@ class UserResource:
             PASSWORD_HASH: password_hash,
             PHONE: phone,
             ROLE: role.value,
-            NOTIFICATION_PREFS: notification_prefs or ["email"],
+            NOTIFICATION_PREFS: notification_prefs or {"email":email},
         }
         result = self.collection.insert_one(user)
         return str(result.inserted_id)
@@ -54,6 +56,18 @@ class UserResource:
         user = self.collection.find_one({"_id": obj_id}) 
         return serialize_item(user) 
     
+    def update_notification_prefs(self, user_id: str, prefs: dict): #Replace the user's notification_prefs with the given dict. Returns True if user was found and updated, False otherwise.
+        try:
+            obj_id = ObjectId(user_id)
+        except Exception:
+            return False
+        
+        result = self.collection.update_one(
+            {"_id": obj_id},
+            {"$set": {NOTIFICATION_PREFS: prefs}}
+        )
+        return result.matched_count > 0
+        
     def parse_role(self, role):
         if isinstance(role,Role): #if already a Role enum, use it
             return role.value
