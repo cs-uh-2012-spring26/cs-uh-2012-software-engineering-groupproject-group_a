@@ -71,7 +71,7 @@ class BookClass(Resource):
             return {MSG: "You have already booked this class"}, HTTPStatus.BAD_REQUEST
 
         #check if full
-        if class_res.has_remaining_spots(class_id):
+        if not class_res.has_remaining_spots(class_id):
             return {MSG: "Class is full"}, HTTPStatus.BAD_REQUEST
 
         #decrement remaining spots atomically
