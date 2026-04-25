@@ -28,22 +28,24 @@ This improves adherence to the Open–Closed Principle because adding a new recu
 
 ## Design Violation & Code Smell Fixes
 
-### Role strings and primitive obsession, encapsulation of authorization logic:
+### Encapsulation of remaining_spots (3.1.1):
+Fixed the encapsulation violation around class capacity by removing direct access to the remaining_spots field from apis/bookings.py. Instead of reading the raw database field name in the API layer, the booking flow now calls ClassResource.has_remaining_spots(class_id).
+
+### Role strings and primitive obsession, encapsulation of authorization logic (3.1.2, 4.2.1):
 Fixed the primitive obsession and role-encapsulation issue by replacing scattered string literals such as "member" and "trainer" with a dedicated Role enum in db/users.py. The API layer now calls create_user(..., role=Role.MEMBER) and create_user(..., role=Role.TRAINER), so valid roles are centralized and type-like rather than being treated as arbitrary text. Also added helper methods such as is_admin, is_trainer, and user_has_management_access to move permission-related behavior into UserResource, which improves encapsulation and removes duplicated authorization logic.
 
-### Open-Closed Principle for registration:
+### Open-Closed Principle for registration (3.4.1):
 Fixed the Open-Closed Principle violation in registration by separating registration into RegisterMember and RegisterTrainer endpoints. Previously, registration logic was tied to one flow that always created a member, so supporting trainer registration required modifying existing behavior. In the refactored design, new registration behavior is added through separate endpoint classes while UserResource.create_user() accepts a role parameter, making the registration flow easier to extend without rewriting the original member-registration logic.
 
-### Dead code in users.py, auth.py:
+### Long Method BookClass.post (4.1.1):
+Reviewed the long-method concern in BookClass.post(), but after refactoring the capacity access and keeping the method in a flat early-return style, the controller remained readable enough for its current responsibilities, so no additional decomposition was introduced beyond the encapsulation fix.
+
+### Dead code in users.py, auth.py (4.5.1):
 Removed dead code in db/users.py by deleting the unused serialize_items import. 
 
 Removed the dead-code issue in apis/auth.py by replacing the unused old role import pattern with the actively used Role enum.
 
-### Encapsulation of remaining_spots:
-Fixed the encapsulation violation around class capacity by removing direct access to the remaining_spots field from apis/bookings.py. Instead of reading the raw database field name in the API layer, the booking flow now calls ClassResource.has_remaining_spots(class_id).
 
-### Long Method BookClass.post:
-Ssimplified BookClass.post() into a clear linear request-handling flow. The method performs one booking workflow in a readable sequence—checking class existence, duplicate booking, remaining capacity, reserving a spot, and creating the booking—without directly exposing storage details.
 
 
 
