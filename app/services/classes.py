@@ -16,10 +16,14 @@ RECURRING_END_DATE_FIELD = "recurrence_end_date"
 RECURRING_TYPE_ERROR = "Unsupported recurrence_type. Supported: daily, weekly"
 RECURRING_END_DATE_ERROR = "recurrence_end_date must be a valid ISO datetime and not before start_time"
 
-def can_user_create_class(user_id):
+def user_has_management_access(user_id):
   user_res = UserResource()
   user = user_res.get_user_by_id(user_id)
-  return user_res.can_create_class(user)
+  return user_res.has_management_access(user)
+
+def validate_class(class_id):
+  class_res = ClassResource()
+  return class_res.get_class_by_id(class_id)
 
 def parse_class_datetimes(class_data):
   try:
