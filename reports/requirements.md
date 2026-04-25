@@ -202,5 +202,10 @@ two new planned features. The following are corrections made to Sprint 2 deliver
 
 - Updated the UML Use Case Diagram to depict authentication and add Email Service as a secondary actor
 
+## Sprint 3A → Sprint 3B Updates
+> Sprint 3B focused on refactoring the design principle violations and code smells from Sprint 3A, and introduced Feature 6 (Create recurring classes) and Feature 7 (Configure notifications), and updated tests and CI to cover the new behavior. The following are corrections made to Sprint 2 and 3a deliverables:
+
+- Updated the class diagram to reflect Sprint 3a feedback (and current system design)
+- Refactored authentication to reflect Sprint 2 feedback by clarifying email‑based login and separating member vs. trainer registration in the design and documentation
 
 
