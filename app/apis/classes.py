@@ -6,7 +6,8 @@ from app.db.users import UserResource, ROLE, USERNAME, EMAIL, PHONE, NOTIFICATIO
 from app.db.bookings import BookingResource, USER_ID
 from app.services.email import send_reminder_email
 from app.services.notifications import NotificationService, ReminderData
-from app.services.classes import user_has_management_access, create_class_with_validation, validate_class
+from app.services.classes import user_has_management_access, create_class_with_validation, validate_class, create_recurring_classes_with_validation
+from app.services.classes import RECURRING_TYPE_FIELD, RECURRING_END_DATE_FIELD
 from app.services.bookings import get_class_members
 
 from http import HTTPStatus
@@ -40,6 +41,8 @@ def extract_class_data(data):
     location: data.get(location),
     capacity: data.get(capacity),
     trainer_name: data.get(trainer_name),
+    RECURRING_TYPE_FIELD: data.get(RECURRING_TYPE_FIELD),
+    RECURRING_END_DATE_FIELD: data.get(RECURRING_END_DATE_FIELD),
   }  
 
 def validate_required_string(value, error_message):
@@ -84,6 +87,17 @@ class_create_fields = api.model(
     location: fields.String(example = _Example_class_1[location]),
     capacity: fields.Integer(example = _Example_class_1[capacity]),
     trainer_name: fields.String(example = _Example_class_1[trainer_name]),
+    RECURRING_TYPE_FIELD: fields.String(
+        required=False,
+        enum=["daily", "weekly"],
+        example="daily",
+        description="Recurrence pattern: daily or weekly",
+    ),
+    RECURRING_END_DATE_FIELD: fields.String(
+        required=False,
+        example="2026-03-16T08:30:00",
+        description="Last date to generate recurring classes (ISO format).",
+    ),
   },
 )
 class_list_fields = api.model(
@@ -143,6 +157,18 @@ class ClassList(Resource):
       {MSG: fields.String("Only trainers or admins can create classes")},
     ),
   )
+
+  @api.doc(
+    description="""
+    Create a single fitness class or a recurring class series.
+
+    Optional recurrence fields:
+    - recurrence_type: "daily" or "weekly"
+    - recurrence_end_date: ISO datetime of the last occurrence
+
+    Remove recurrence_type and recurrence_end_date lines to create a single class.
+    """
+  )
   def post(self):
     #Validate that request is json
     data = request.json
@@ -162,12 +188,23 @@ class ClassList(Resource):
     if validation_error:
       return validation_error
     
-    #Create class through service layer
+    recurrence_type = class_data.get(RECURRING_TYPE_FIELD)
+
+    if recurrence_type:
+      #Recurring series
+      class_ids, error = create_recurring_classes_with_validation(class_data)
+      if error:
+        return {MSG: error}, HTTPStatus.NOT_ACCEPTABLE
+
+      return {
+        MSG: f"Recurring classes created with ids {class_ids}"
+      }, HTTPStatus.OK
+
+    #Single class - create class through service layer
     class_id, creation_error = create_class_with_validation(class_data)
     if creation_error:
        return {MSG: creation_error}, HTTPStatus.NOT_ACCEPTABLE
     return {MSG:f"Class created with id {class_id}"}, HTTPStatus.OK
-
 
 @api.route("/<string:class_id>/members")
 class ClassMembers(Resource):
