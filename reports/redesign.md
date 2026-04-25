@@ -49,3 +49,7 @@ Removed the dead-code issue in apis/auth.py by replacing the unused old role imp
 
 
 
+>> ## Team member responsibilities:
+>>  - Isumi: Refactors for Design Principle Violations 3.1.1, 3.1.2, 3.4.1 & Code Smells 4.1.1, 4.2.1, 4.5.1, Feature 6 Create recurring classes implementation, Class diagram creation
+>>  - Nada: 
+>>  - Rujul: 
