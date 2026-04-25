@@ -34,5 +34,6 @@ jobs:
           JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
           AWS_REGION: "us-east-1"
           SES_SENDER_EMAIL: "test@example.com"
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
           pytest tests/ --cov=app --cov-report=term-missing --cov-fail-under=90

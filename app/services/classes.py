@@ -1,7 +1,7 @@
 from app.db.classes import ClassResource
 from app.db.users import UserResource
 from datetime import datetime, timedelta
-from app.db.classes import class_name, start_time, end_time, location, capacity, trainer_name
+from app.db.constants import class_name, start_time, end_time, location, capacity, trainer_name
 from app.services.recurrence import RecurrenceStrategy, DailyRecurrenceStrategy, WeeklyRecurrenceStrategy
 
 CLASS_WINDOW_DAYS = 14

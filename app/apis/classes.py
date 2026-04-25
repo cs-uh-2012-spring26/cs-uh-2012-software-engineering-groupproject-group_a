@@ -1,7 +1,7 @@
 from flask_restx import Namespace, Resource, fields
 from app.apis import MSG
 from app.db.classes import ClassResource
-from app.db.classes import class_name, start_time, end_time, location, capacity, remaining_spots, trainer_name
+from app.db.constants import class_name, start_time, end_time, location, capacity, remaining_spots, trainer_name
 from app.db.users import UserResource, ROLE, USERNAME, EMAIL, PHONE, NOTIFICATION_PREFS
 from app.db.bookings import BookingResource, USER_ID
 from app.services.email import send_reminder_email
