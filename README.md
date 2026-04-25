@@ -155,6 +155,47 @@ Log in as a Trainer:
 - `GET /classes/{class_id}/members` (View Class Members – admin/trainer only)
 - `POST /classes/{class_id}/reminders` (Send Reminder Emails – admin/trainer only)
 
+## Notification Preferences
+
+Members can choose how they receive class reminders, via email, Telegram, or both.
+
+- On registration, notification preferences default to email using the address provided at sign-up.
+- Members can update their preferences at any time via the preferences endpoint.
+- When a trainer sends reminders for a class, each member is notified through their chosen channel(s).
+
+### Telegram Setup
+To receive Telegram notifications:
+1. Search for the bot on Telegram and send it `/start`.
+2. The bot will reply with your chat ID.
+3. Copy that chat ID and update your preferences using the endpoint below.
+
+### Endpoints
+
+**GET /notifications/preferences**
+- Auth: JWT required (member, trainer, or admin)
+- Returns the logged-in user's current notification preferences.
+- Response example:
+```json
+{"message": {"email": "user@example.com", "telegram": "123456789"}}
+```
+
+**PUT /notifications/preferences**
+- Auth: JWT required (member, trainer, or admin)
+- Updates the logged-in user's notification preferences.
+- Request body example:
+```json
+{"notification_prefs": {"email": "user@example.com", "telegram": "123456789"}}
+```
+- Supported channels: `email`, `telegram`
+
+## Telegram Configuration
+
+To enable Telegram notifications, add the following to your `.env` file:
+```
+TELEGRAM_BOT_TOKEN=your-telegram-bot-token
+```
+To get a bot token, message @BotFather on Telegram and follow the instructions to create a bot.
+
 ## Email Configuration (Amazon SES)
 
 This application uses Amazon Simple Email Service (SES) to send reminder emails.
