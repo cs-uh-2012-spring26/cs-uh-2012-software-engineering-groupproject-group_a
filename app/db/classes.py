@@ -1,21 +1,10 @@
 from app.db.utils import serialize_item, serialize_items
 from app.db import DB
 from datetime import datetime, timedelta
+from app.db.constants import (CLASS_WINDOW_DAYS, CLASS_COLLECTION, class_name, start_time, end_time, location, capacity, trainer_name, remaining_spots)
 
 from bson import ObjectId
 
-CLASS_WINDOW_DAYS = 14
-
-#Class collection name
-CLASS_COLLECTION = "classes"
-#Class fields
-class_name ="class_name"
-start_time = "start_time"
-end_time = "end_time"
-location = "location"
-capacity = "capacity"
-trainer_name = "trainer_name"
-remaining_spots = "remaining_spots"
 
 class ClassResource:
   def __init__(self):

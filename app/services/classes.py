@@ -1,7 +1,7 @@
 from app.db.classes import ClassResource
 from app.db.users import UserResource
 from datetime import datetime, timedelta
-from app.db.classes import class_name, start_time, end_time, location, capacity, trainer_name
+from app.db.constants import class_name, start_time, end_time, location, capacity, trainer_name
 from app.services.recurrence import RecurrenceStrategy, DailyRecurrenceStrategy, WeeklyRecurrenceStrategy
 
 CLASS_WINDOW_DAYS = 14
@@ -68,6 +68,15 @@ def parse_series_end_date(class_data, first_start: datetime):
 
     return series_end
 
+def is_class_in_future(cls):
+  start_time_value = cls.get(start_time)
+  if not isinstance(start_time_value, str):
+      return False
+  try:
+      class_start = datetime.fromisoformat(start_time_value)
+  except ValueError:
+      return False
+  return class_start > datetime.now()
 
 def create_class_with_validation(class_data):
   parsed_datetimes = parse_class_datetimes(class_data)

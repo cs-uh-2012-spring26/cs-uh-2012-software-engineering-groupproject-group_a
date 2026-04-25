@@ -13,3 +13,4 @@ python-dateutil==2.9.0
 pytest
 pytest-mock
 mongomock
+requests

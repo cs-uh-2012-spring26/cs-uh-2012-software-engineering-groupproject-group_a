@@ -1,12 +1,11 @@
 from flask_restx import Namespace, Resource, fields
 from app.apis import MSG
 from app.db.classes import ClassResource
-from app.db.classes import class_name, start_time, end_time, location, capacity, remaining_spots, trainer_name
+from app.db.constants import class_name, start_time, end_time, location, capacity, remaining_spots, trainer_name
 from app.db.users import UserResource, ROLE, USERNAME, EMAIL, PHONE, NOTIFICATION_PREFS
 from app.db.bookings import BookingResource, USER_ID
-from app.services.email import send_reminder_email
 from app.services.notifications import NotificationService, ReminderData
-from app.services.classes import user_has_management_access, create_class_with_validation, validate_class, create_recurring_classes_with_validation
+from app.services.classes import user_has_management_access, create_class_with_validation, validate_class, create_recurring_classes_with_validation, is_class_in_future
 from app.services.classes import RECURRING_TYPE_FIELD, RECURRING_END_DATE_FIELD
 from app.services.bookings import get_class_members
 
@@ -271,7 +270,7 @@ class SendReminders(Resource):
       "Reminders sent",
       api.model(
           "RemindersResponse",
-          {MSG: fields.String(example="Reminders sent to 5 member(s). Failed: 0.")},
+          {MSG: fields.String(example="Notifications sent: 5, Failed: 0.")},
       ),
   )
   @api.response(
@@ -290,6 +289,15 @@ class SendReminders(Resource):
           {MSG: fields.String(example="Class not found")},
       ),
   )
+  @api.response(
+    HTTPStatus.NOT_ACCEPTABLE,
+    "Invalid Request",
+    api.model(
+        "RemindersNotAcceptable",
+        {MSG: fields.String(example="Reminders can only be sent for upcoming classes")},
+    ),
+)
+
   def post(self, class_id: str):
     access_error = validate_management_access("Only trainers or admins can send reminders")
     if access_error:
@@ -298,6 +306,9 @@ class SendReminders(Resource):
     cls, error = get_valid_class(class_id)
     if error:
       return error
+    
+    if not is_class_in_future(cls):
+      return {MSG: "Reminders can only be sent for upcoming classes"}, HTTPStatus.NOT_ACCEPTABLE
     
     members = get_class_members(class_id)
     if not members:
@@ -308,9 +319,8 @@ class SendReminders(Resource):
     total_failed = 0
 
     for member in members:
-        prefs = member.get(NOTIFICATION_PREFS) or ['email']
+        prefs = member.get(NOTIFICATION_PREFS) or {}
         reminder = ReminderData(
-            recipient_email=member.get(EMAIL),
             recipient_name=member.get(USERNAME, "Member"),
             class_name=cls.get(class_name, ""),
             start_time=cls.get(start_time, ""),
