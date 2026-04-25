@@ -26,6 +26,31 @@ This improves adherence to the Open–Closed Principle because adding a new recu
 - Makes recurrence extension a matter of adding a new strategy (satisfies Open–Closed).
 - Keeps scheduling logic centralized and reusable across single and recurring flows.
 
+## Feature 7: Configure Notifications
+
+**Design Pattern**:
+
+*Strategy* - Defines a family of algorithms, encapsulates each one, and makes them interchangeable. Each notification channel is a separate strategy that can be selected at runtime based on the user's preferences.
+
+**Why**:
+
+Feature 7 is best suited to the Strategy pattern because notification delivery requires selecting one or more channels at runtime (email, Telegram, and future channels like SMS or Discord). The system needed to be open for extension but closed for modification such that adding a new channel should not require touching existing code.
+
+**Refactoring**:
+
+- Introduced a `BaseNotifier` abstract class in `app/services/notifications.py` defining the `send(reminder, contact_details)` interface.
+- Implemented `EmailNotifier` and `TelegramNotifier` as concrete strategies.
+- Introduced `NotificationService` as the context class that holds a registry of notifiers and dispatches to whichever channels are listed in the user's `notification_prefs`.
+- Introduced `ReminderData` as a parameter object to replace the long argument list previously passed to `send_reminder_email`.
+- Added `NOTIFICATION_PREFS` field to the user profile in `db/users.py` storing a dict mapping channel name to contact detail (e.g. `{"email": "user@example.com", "telegram": "123456789"}`).
+- Added `app/apis/notifications.py` with `GET` and `PUT /notifications/preferences` endpoints allowing users to view and update their notification preferences.
+
+**Why it fixes previous violations**:
+
+- **OCP**: `SendReminders.post()` no longer needs to be modified when a new channel is added. Adding SMS only requires a new `SmsNotifier` class and one line in `NotificationService.__init__()`.
+- **DIP**: `SendReminders.post()` now depends on the `BaseNotifier` abstraction through `NotificationService`, not on the concrete `send_reminder_email` function directly.
+- **Long Parameter List**: `ReminderData` dataclass groups the five reminder primitives into one object passed to each notifier.
+
 ## Design Violation & Code Smell Fixes
 
 ### Encapsulation of remaining_spots (3.1.1):
@@ -45,7 +70,17 @@ Removed dead code in db/users.py by deleting the unused serialize_items import.
 
 Removed the dead-code issue in apis/auth.py by replacing the unused old role import pattern with the actively used Role enum.
 
+### Single Responsibility Principle for `ClassMembers.get()` and `SendReminders.post()` (3.3.1):
+Both methods previously handled authorization, class lookup, booking retrieval, member fetching, and notification sending all in one place. Fixed by using shared helpers.
 
+### Open-Closed Principle & Dependency Inversion in `SendReminders.post()` (3.4.2, 3.5.1):
+Previously `SendReminders.post()` called `send_reminder_email` directly, making it impossible to add new notification channels without modifying the method. Fixed by introducing `NotificationService` with the Strategy pattern. 
 
+### Long Method `SendReminders.post()`:
+Fixed by extracting `get_class_members(class_id)` in `services/bookings.py` which moved the member-loop logic out of the method.
 
+### Duplicate Code in `ClassMembers.get()` and `SendReminders.post()` (4.4.1):
+Both methods previously duplicated identical authorization and class-lookup blocks. Fixed by extracting shared helpers used by both methods.
 
+### Long Parameter List in `send_reminder_email()` (4.3.1):
+Fixed by introducing the `ReminderData` dataclass as a parameter object. Instead of passing five separate primitives, a single `ReminderData` instance is constructed in `SendReminders.post()` and passed to the notifier.
