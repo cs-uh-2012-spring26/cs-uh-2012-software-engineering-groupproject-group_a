@@ -112,6 +112,27 @@ docker compose up --build
 - The backend runs with Gunicorn in Docker.
 - MongoDB runs in a separate container through Docker Compose.
 
+## Deployment
+
+The backend application is deployed on a DigitalOcean virtual machine using Docker and Docker Compose.
+
+### Live Deployment
+
+http://192.34.57.23:8000
+
+### Deployment Stack
+
+- Ubuntu VM (DigitalOcean)
+- Docker
+- Docker Compose
+- Flask
+- Gunicorn
+- MongoDB
+
+### Deployment Notes
+
+The application was containerized using Docker and deployed on a cloud VM with SSH access configured for secure remote management.
+
 ## Authentication & Testing Protected Endpoints
 
 This API uses JWT-based authentication to protect certain endpoints.
