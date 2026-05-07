@@ -36,9 +36,10 @@ jobs:
               cd ~/app
               
               cat > .env <<EOF
-              MONGO_URI=${{ secrets.PROD_MONGO_URI }}
-              DB_NAME=${{ secrets.PROD_DB_NAME }}
+              MONGO_URI=${{ secrets.MONGO_URI }}
+              DB_NAME=${{ secrets.DB_NAME }}
               MOCK_DB=false
+              DEBUG=false
               JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
               AWS_REGION=${{ secrets.AWS_REGION }}
               SES_SENDER_EMAIL=${{ secrets.SES_SENDER_EMAIL }}
