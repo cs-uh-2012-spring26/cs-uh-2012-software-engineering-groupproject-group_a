@@ -96,6 +96,22 @@ To deactivate the virtual environment:
 deactivate
 ```
 
+## Running with Docker
+
+1. Create a local `.env` file with the required environment variables.
+2. Start the backend and MongoDB containers:
+
+```bash
+docker compose up --build
+```
+
+3. Access the API at `http://localhost:8000`.
+4. Use Swagger to test endpoints.
+
+### Notes
+- The backend runs with Gunicorn in Docker.
+- MongoDB runs in a separate container through Docker Compose.
+
 ## Authentication & Testing Protected Endpoints
 
 This API uses JWT-based authentication to protect certain endpoints.
