@@ -1,0 +1,27 @@
+#version: '3'
+
+services:
+  website:
+    container_name: flask-website
+    build: ./
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - DB_NAME=${DB_NAME}
+      - MOCK_DB=${MOCK_DB}
+      - DEBUG=${DEBUG}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - SES_SENDER_EMAIL=${SES_SENDER_EMAIL}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=${DB_NAME}
