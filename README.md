@@ -231,7 +231,7 @@ To enable Telegram notifications, add the following to your `.env` file:
 ```
 TELEGRAM_BOT_TOKEN=your-telegram-bot-token
 ```
-To get a bot token, message @BotFather on Telegram and follow the instructions to create a bot.
+To get a bot token, message @BotFather on Telegram and follow the instructions to create a bot
 
 ## Email Configuration (Amazon SES)
 
