@@ -20,17 +20,20 @@ jobs:
           port: ${{ secrets.PORT }}
           key: ${{ secrets.KEY }}
           script: |
+            git config --global --add safe.directory ~/app
             cd ~/app
             git pull origin main
 
-            echo "MONGO_URI=${{ secrets.MONGO_URI }}" > .env
-            echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
-            echo "MOCK_DB=false" >> .env
-            echo "DEBUG=false" >> .env
-            echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> .env
-            echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
-            echo "SES_SENDER_EMAIL=${{ secrets.SES_SENDER_EMAIL }}" >> .env
-            echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
+            cat > .env << 'EOF'
+            MONGO_URI=${{ secrets.MONGO_URI }}
+            DB_NAME=${{ secrets.DB_NAME }}
+            MOCK_DB=false
+            DEBUG=false
+            JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+            AWS_REGION=${{ secrets.AWS_REGION }}
+            SES_SENDER_EMAIL=${{ secrets.SES_SENDER_EMAIL }}
+            TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+            EOF
 
             docker-compose down
             docker-compose up -d --build
