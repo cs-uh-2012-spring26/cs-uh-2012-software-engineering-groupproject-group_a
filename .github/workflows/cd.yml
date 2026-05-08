@@ -46,6 +46,6 @@ jobs:
               TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
               EOF
 
-              docker compose down
-              docker compose up -d --build
+              docker-compose down
+              docker-compose up -d --build
 
