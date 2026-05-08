@@ -1,0 +1,51 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Copy content recursively to remote
+        uses: actions/checkout@v4
+
+      - name: Copy files to VM via SSH password
+        uses: appleboy/scp-action@v0.1.4
+        with:
+            host: ${{ secrets.HOST }}
+            username: ${{ secrets.USERNAME }}
+            port: ${{ secrets.PORT }}
+            key: ${{ secrets.KEY }}
+            source: "."
+            target: "~/app"
+
+      - name: Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+            host: ${{ secrets.HOST }}
+            username: ${{ secrets.USERNAME }}
+            port: ${{ secrets.PORT }}
+            key: ${{ secrets.KEY }}
+            script: |
+              cd ~/app
+              
+              cat > .env <<EOF
+              MONGO_URI=${{ secrets.MONGO_URI }}
+              DB_NAME=${{ secrets.DB_NAME }}
+              MOCK_DB=false
+              DEBUG=false
+              JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+              AWS_REGION=${{ secrets.AWS_REGION }}
+              SES_SENDER_EMAIL=${{ secrets.SES_SENDER_EMAIL }}
+              TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+              EOF
+
+              docker compose down
+              docker compose up -d --build
+
