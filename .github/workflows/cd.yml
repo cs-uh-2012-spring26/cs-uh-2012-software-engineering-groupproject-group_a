@@ -47,6 +47,7 @@ jobs:
               EOF
 
               docker-compose down --remove-orphans
+              docker rm -f mongo || true
               docker-compose up -d --build
               
 
