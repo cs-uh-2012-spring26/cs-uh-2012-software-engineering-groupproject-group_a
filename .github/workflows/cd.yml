@@ -36,4 +36,5 @@ jobs:
             EOF
 
             docker-compose down
+            docker rm -f flask-website || true
             docker-compose up -d --build
