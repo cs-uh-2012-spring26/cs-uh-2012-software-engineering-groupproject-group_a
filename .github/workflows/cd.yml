@@ -12,10 +12,10 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      - name: Copy content recursively to remote
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Copy files to VM via SSH password
+      - name: Copy files to VM 
         uses: appleboy/scp-action@v0.1.4
         with:
             host: ${{ secrets.HOST }}
@@ -46,6 +46,7 @@ jobs:
               TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
               EOF
 
-              docker-compose down
+              docker-compose down --remove-orphans
               docker-compose up -d --build
+              
 
