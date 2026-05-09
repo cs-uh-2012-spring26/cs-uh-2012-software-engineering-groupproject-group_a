@@ -423,4 +423,67 @@ def test_telegram_bot_valid_phone_links_chat_id(app_client, seed_data):
         users = DB.get_collection("users")
         user = users.find_one({"phone": seed_data["member3_phone"]})
         assert user["telegram_chat_id"] == "999888"
+
+def test_telegram_bot_invalid_phone(app_client):
+    from app.services.telegram_bot import handle_updates
+    with patch("app.services.telegram_bot.send_message") as mock_send:
+        updates = [{
+            "update_id": 2,
+            "message": {"chat": {"id": 111}, "text": "+00000000000"}
+        }]
+        handle_updates(updates)
+        mock_send.assert_called_once()
+        args = mock_send.call_args[0]
+        assert "not found" in args[1].lower()
+ 
+ 
+def test_telegram_bot_user_without_telegram_pref(app_client, seed_data):
+    from app.services.telegram_bot import handle_updates
+    # member1 has notification_prefs: ["email"] only
+    users = DB.get_collection("users")
+    member1 = users.find_one({"phone": "+97150000000"})
+    with patch("app.services.telegram_bot.send_message") as mock_send:
+        updates = [{
+            "update_id": 3,
+            "message": {"chat": {"id": 222}, "text": "+97150000000"}
+        }]
+        handle_updates(updates)
+        mock_send.assert_called_once()
+        args = mock_send.call_args[0]
+        assert "not enabled" in args[1].lower()
+ 
+ 
+def test_telegram_bot_no_message_in_update():
+    from app.services.telegram_bot import handle_updates
+    updates = [{"update_id": 4}] 
+    handle_updates(updates)  
+ 
+ 
+ 
+# Notification Service
+
+def test_notification_service_email_only():
+    with patch("app.services.email.send_reminder_email", return_value=True):
+        service = NotificationService()
+        sent, failed = service.notify(get_reminder_data(), ["email"])
+        assert sent == 1 and failed == 0
+ 
+ 
+def test_notification_service_telegram_only():
+    with patch("app.services.telegram.send_reminder_telegram", return_value=True):
+        service = NotificationService()
+        sent, failed = service.notify(get_reminder_data(), ["telegram"])
+        assert sent == 1 and failed == 0
+ 
+def test_notification_service_both_succeed():
+    with patch("app.services.email.send_reminder_email", return_value=True), \
+         patch("app.services.telegram.send_reminder_telegram", return_value=True):
+        service = NotificationService()
+        sent, failed = service.notify(get_reminder_data(), ["email", "telegram"])
+        assert sent == 2 and failed == 0
+ 
+def test_notification_service_empty_prefs():
+    service = NotificationService()
+    sent, failed = service.notify(get_reminder_data(), [])
+    assert sent == 0 and failed == 0
  
