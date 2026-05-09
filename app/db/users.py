@@ -73,7 +73,7 @@ class UserResource:
         )
         return result.matched_count > 0
     
-    def update_notification_prefs(self, user_id: str, prefs: dict): #Replace the user's notification_prefs with the given dict. Returns True if user was found and updated, False otherwise.
+    def update_notification_prefs(self, user_id: str, prefs: list): #Replace the user's notification_prefs with the given list. Returns True if user was found and updated, False otherwise.
         try:
             obj_id = ObjectId(user_id)
         except Exception:

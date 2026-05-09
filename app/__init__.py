@@ -58,6 +58,10 @@ def create_app():
     api.add_namespace(bookings_ns)
     api.add_namespace(notifications_ns)
 
+    if os.environ.get("MOCK_DB", "false").lower() != "true":
+        from app.services.telegram_bot import start_polling
+        start_polling()
+
     #error handlers
     @api.errorhandler(NoAuthorizationError) #handle missing Authorization header
     def handle_no_authorization_error(error):
