@@ -207,6 +207,9 @@ To receive Telegram notifications:
 3. Copy that chat ID and update your preferences using the endpoint below.
 
 ### Endpoints
+**GET /classes/**
+- Displays classes in the upcoming 2 weeks. 
+- Note: Classes outside the 2 week timeframe are created but not visible until they are within the 2 week timeframe.
 
 **GET /notifications/preferences**
 - Auth: JWT required (member, trainer, or admin)
