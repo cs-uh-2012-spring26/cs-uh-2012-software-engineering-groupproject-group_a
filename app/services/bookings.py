@@ -1,5 +1,5 @@
 from app.db.bookings import BookingResource, USER_ID
-from app.db.users import UserResource, USERNAME, EMAIL, PHONE, NOTIFICATION_PREFS
+from app.db.users import UserResource, USERNAME, EMAIL, PHONE, NOTIFICATION_PREFS, TELEGRAM_CHAT_ID
 
 def get_class_members(class_id):
     booking_res = BookingResource()
@@ -21,6 +21,7 @@ def get_class_members(class_id):
             USERNAME: member.get(USERNAME),
             EMAIL: member.get(EMAIL),
             PHONE: member.get(PHONE),
-            NOTIFICATION_PREFS: member.get(NOTIFICATION_PREFS),
+            NOTIFICATION_PREFS: member.get(NOTIFICATION_PREFS) OR ["email"],
+            TELEGRAM_CHAT_ID: member.get(TELEGRAM_CHAT_ID),
         })
     return members
