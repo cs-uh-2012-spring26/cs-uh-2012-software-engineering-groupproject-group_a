@@ -36,7 +36,7 @@ def handle_updates(updates):
         # Look up user by the phone number they sent
         user = user_res.get_user_by_phone(phone)
         if user is None:
-            send_message(chat_id, "Phone number not found. Please send the phone number you registered with.")
+            send_message(chat_id, "Phone number not found. Please send your phone number in the format you registered with (eg. +97150000000).")
             continue
         # Only link if user has telegram in their preferences
         prefs = user.get(NOTIFICATION_PREFS, [])
