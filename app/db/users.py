@@ -13,6 +13,7 @@ PASSWORD_HASH = "password_hash"
 PHONE = "phone"
 ROLE = "role" #"member" ,"trainer", "admin"
 NOTIFICATION_PREFS = "notification_prefs"
+TELEGRAM_CHAT_ID = "telegram_chat_id"
 
 VALID_CHANNELS = {"email", "telegram"}
 
@@ -34,7 +35,8 @@ class UserResource:
             PASSWORD_HASH: password_hash,
             PHONE: phone,
             ROLE: role.value,
-            NOTIFICATION_PREFS: notification_prefs or {"email":email},
+            NOTIFICATION_PREFS: notification_prefs or ["email"],
+            TELEGRAM_CHAT_ID: None,
         }
         result = self.collection.insert_one(user)
         return str(result.inserted_id)
@@ -56,7 +58,22 @@ class UserResource:
         user = self.collection.find_one({"_id": obj_id}) 
         return serialize_item(user) 
     
-    def update_notification_prefs(self, user_id: str, prefs: dict): #Replace the user's notification_prefs with the given dict. Returns True if user was found and updated, False otherwise.
+    def get_user_by_phone(self, phone: str):
+        user = self.collection.find_one({PHONE: phone})
+        return serialize_item(user)
+    
+    def save_telegram_chat_id(self, user_id: str, chat_id: str):
+        try:
+            obj_id = ObjectId(user_id)
+        except Exception:
+            return False
+        result = self.collection.update_one(
+            {"_id": obj_id},
+            {"$set": {TELEGRAM_CHAT_ID: chat_id}}
+        )
+        return result.matched_count > 0
+    
+    def update_notification_prefs(self, user_id: str, prefs: list): #Replace the user's notification_prefs with the given list. Returns True if user was found and updated, False otherwise.
         try:
             obj_id = ObjectId(user_id)
         except Exception:

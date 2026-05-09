@@ -7,24 +7,25 @@ class ReminderData:
     class_name: str
     start_time: str
     location: str
+    email: str = None
+    telegram_chat_id: str = None
 
 class BaseNotifier(ABC):
     @abstractmethod
-    def send(self, reminder: ReminderData, contact_details: dict) -> bool:
+    def send(self, reminder: ReminderData) -> bool:
         '''
-        Sends a reminder using details from contact_details
+        Sends a reminder
         Returns True on success and False on failure
         '''
 
 class EmailNotifier(BaseNotifier):
-    def send(self, reminder: ReminderData, contact_details: dict):
+    def send(self, reminder: ReminderData):
         from app.services.email import send_reminder_email
-        email = contact_details.get("email")
-        if not email:
+        if not reminder.email:
             return False
         try:
             return send_reminder_email(
-                recipient_email=email,
+                recipient_email=reminder.email,
                 recipient_name=reminder.recipient_name,
                 class_name=reminder.class_name,
                 start_time=reminder.start_time,
@@ -34,14 +35,13 @@ class EmailNotifier(BaseNotifier):
             return False
         
 class TelegramNotifier(BaseNotifier):
-    def send(self, reminder: ReminderData, contact_details: dict):
+    def send(self, reminder: ReminderData):
         from app.services.telegram import send_reminder_telegram
-        chat_id = contact_details.get("telegram")
-        if not chat_id:
+        if not reminder.telegram_chat_id:
             return False
         try:
             return send_reminder_telegram(
-                chat_id=chat_id,
+                chat_id=reminder.telegram_chat_id,
                 recipient_name=reminder.recipient_name,
                 class_name=reminder.class_name,
                 start_time=reminder.start_time,
@@ -57,7 +57,7 @@ class NotificationService:
             "telegram": TelegramNotifier(),
         }
 
-    def notify(self, reminder: ReminderData, prefs: dict):
+    def notify(self, reminder: ReminderData, prefs: list):
         # Send notifications to all channels present in prefs
         sent = 0
         failed = 0
@@ -65,7 +65,7 @@ class NotificationService:
             notifier = self._notifiers.get(channel)
             if notifier is None:
                 continue
-            if notifier.send(reminder, prefs):
+            if notifier.send(reminder):
                 sent += 1
             else:
                 failed += 1

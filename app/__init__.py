@@ -14,6 +14,7 @@ from flask_restx import Api
 from flask_jwt_extended import JWTManager
 from flask_jwt_extended.exceptions import NoAuthorizationError
 from werkzeug.exceptions import BadRequest
+import os
 
 def create_app():
     app = Flask(__name__)
@@ -57,6 +58,10 @@ def create_app():
     api.add_namespace(auth_ns)
     api.add_namespace(bookings_ns)
     api.add_namespace(notifications_ns)
+
+    if os.environ.get("MOCK_DB", "false").lower() != "true":
+        from app.services.telegram_bot import start_polling
+        start_polling()
 
     #error handlers
     @api.errorhandler(NoAuthorizationError) #handle missing Authorization header

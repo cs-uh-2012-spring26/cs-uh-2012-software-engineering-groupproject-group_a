@@ -4,19 +4,19 @@ from flask import request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from app.apis import MSG
-from app.db.users import UserResource, NOTIFICATION_PREFS, VALID_CHANNELS
+from app.db.users import UserResource, NOTIFICATION_PREFS, TELEGRAM_CHAT_ID, VALID_CHANNELS
 
 api = Namespace("notifications", description="Endpoint for managing notification preferences")
 
 prefs_fields = api.model(
     "NotificationPreferences",
     {
-        "notification_prefs": fields.Raw(
-            example={"email": "user@example.com", "telegram": "123456789"},
+        "notification_prefs": fields.List(
+            fields.String,
+            example=["email", "telegram"],
             description=(
-                "Dictionary mapping channel name to contact detail. "
-                "Supported channels: 'email', 'telegram'. "
-                "Include only the channels you want to receive notifications through"
+                "List of channels to receive notifications through. "
+                "Supported channels: 'email', 'telegram'."
             ),
         )
     },
@@ -43,8 +43,12 @@ class NotificationPreferences(Resource):
         user = user_res.get_user_by_id(user_id)
         if user is None:
             return {MSG: "User not found"}, HTTPStatus.NOT_FOUND
-        return {MSG: user.get(NOTIFICATION_PREFS, {})}, HTTPStatus.OK
-
+        return {
+            MSG: {
+                "channels": user.get(NOTIFICATION_PREFS, ["email"]),
+                "telegram_linked": user.get(TELEGRAM_CHAT_ID) is not None,
+            }
+        }, HTTPStatus.OK
 
     @jwt_required()
     @api.expect(prefs_fields)
@@ -65,16 +69,12 @@ class NotificationPreferences(Resource):
             return {MSG: "Request body must be JSON"}, HTTPStatus.NOT_ACCEPTABLE
 
         prefs = data.get("notification_prefs")
-        if not isinstance(prefs, dict):
-            return {MSG: "notification_prefs must be a dictionary"}, HTTPStatus.NOT_ACCEPTABLE
+        if not isinstance(prefs, list):
+            return {MSG: "notification_prefs must be a list"}, HTTPStatus.NOT_ACCEPTABLE
 
         for channel in prefs:
             if channel not in VALID_CHANNELS:  
                 return {MSG: f"Only supported channels are accepted: {list(VALID_CHANNELS)}"}, HTTPStatus.NOT_ACCEPTABLE
-
-        for channel, contact in prefs.items():
-            if not isinstance(contact, str) or not contact.strip():
-                return {MSG: f"Contact detail for '{channel}' must be a non-empty string"}, HTTPStatus.NOT_ACCEPTABLE
 
         user_id = get_jwt_identity()
         user_res = UserResource()
@@ -82,4 +82,9 @@ class NotificationPreferences(Resource):
         if not updated:
             return {MSG: "Failed to update preferences"}, HTTPStatus.NOT_ACCEPTABLE
 
+        if "telegram" in prefs:
+            return {
+                MSG: "Preferences updated. To activate Telegram notifications, message your registered phone number to @FitnessClassReminder_bot on Telegram."
+            }, HTTPStatus.OK
+        
         return {MSG: "Notification preferences updated successfully"}, HTTPStatus.OK

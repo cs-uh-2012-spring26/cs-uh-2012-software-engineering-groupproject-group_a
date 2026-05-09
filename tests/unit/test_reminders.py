@@ -52,6 +52,7 @@ def seed_data():
     member2_id = ObjectId() # email only - empty email
     member3_id = ObjectId()  # telegram only
     member4_id = ObjectId()  # both email and telegram
+    member5_id = ObjectId()  # telegram selected but no chat id yet
 
     classes.insert_many([{
         "_id": class1_id,
@@ -93,58 +94,78 @@ def seed_data():
         "remaining_spots": 10,
     },])
 
-    users.insert_many([{
-        "_id": member1_id,
-        "name": "Test Member 1",
-        "email": "member1@example.com",
-        "phone": "+97150000000",
-        "role": "member",
-        "password_hash": "x",
-        "notification_prefs": {"email": "member1@example.com"},
-    }, {
-        "_id": member2_id,
-        "name": "Test Member 2",
-        "email": "",
-        "phone": "+97150000001",
-        "role": "member",
-        "password_hash": "x",
-        "notification_prefs": {"email": ""},
-    },
-    {
-        "_id": member3_id,
-        "name": "Test Member 3",
-        "email": "member3@example.com",
-        "phone": "+97150000002",
-        "role": "member",
-        "password_hash": "x",
-        "notification_prefs": {"telegram": "111222333"},
-    },
-    {
-        "_id": member4_id,
-        "name": "Test Member 4",
-        "email": "member4@example.com",
-        "phone": "+97150000003",
-        "role": "member",
-        "password_hash": "x",
-        "notification_prefs": {"email": "member4@example.com", "telegram": "444555666"},
-    },])
+    users.insert_many([
+        {
+            "_id": member1_id,
+            "name": "Test Member 1",
+            "email": "member1@example.com",
+            "phone": "+97150000000",
+            "role": "member",
+            "password_hash": "x",
+            "notification_prefs": ["email"],
+            "telegram_chat_id": None,
+        },
+        {
+            "_id": member2_id,
+            "name": "Test Member 2",
+            "email": "",
+            "phone": "+97150000001",
+            "role": "member",
+            "password_hash": "x",
+            "notification_prefs": ["email"],
+            "telegram_chat_id": None,
+        },
+        {
+            "_id": member3_id,
+            "name": "Test Member 3",
+            "email": "member3@example.com",
+            "phone": "+97150000002",
+            "role": "member",
+            "password_hash": "x",
+            "notification_prefs": ["telegram"],
+            "telegram_chat_id": "111222333",
+        },
+        {
+            "_id": member4_id,
+            "name": "Test Member 4",
+            "email": "member4@example.com",
+            "phone": "+97150000003",
+            "role": "member",
+            "password_hash": "x",
+            "notification_prefs": ["email", "telegram"],
+            "telegram_chat_id": "444555666",
+        },
+        {
+            "_id": member5_id,
+            "name": "Test Member 5",
+            "email": "member5@example.com",
+            "phone": "+97150000004",
+            "role": "member",
+            "password_hash": "x",
+            "notification_prefs": ["telegram"],
+            "telegram_chat_id": None,  # selected telegram but not linked yet
+        },
+    ])
 
     bookings.insert_many([
-        {"user_id": str(member1_id),"class_id": str(class2_id)}, 
-        {"user_id": str(member2_id),"class_id": str(class2_id)}, 
-        {"user_id": ObjectId(), "class_id": str(class2_id)}, #non string id check
+        {"user_id": str(member1_id), "class_id": str(class2_id)},
+        {"user_id": str(member2_id), "class_id": str(class2_id)},
+        {"user_id": ObjectId(), "class_id": str(class2_id)},  # non-string id check
         
+        # class3: all channel combinations
         {"user_id": str(member1_id), "class_id": str(class3_id)},
         {"user_id": str(member3_id), "class_id": str(class3_id)},
         {"user_id": str(member4_id), "class_id": str(class3_id)},
         {"user_id": str(member2_id), "class_id": str(class3_id)},
+        {"user_id": str(member5_id), "class_id": str(class3_id)},
     ])
 
     return {"class1_id":str(class1_id), 
             "class2_id":str(class2_id), 
             "class3_id": str(class3_id),
             "past_class_id": str(past_class_id),
-            "member1_id": str(member1_id),}
+            "member3_phone": "+97150000002",
+            "member5_id": str(member5_id),}
 
 def get_admin_auth_header(app_client):
   #Log in as seeded admin user and return valid JWT auth header
@@ -204,6 +225,8 @@ def get_reminder_data():
         class_name="Yoga",
         start_time="2026-05-01T08:00:00",
         location="Studio B",
+        email="test@example.com",
+        telegram_chat_id="123456",
     )
 
 # POST /classes/<id>/reminders
@@ -242,48 +265,56 @@ def test_send_reminders_past_class(app_client, seed_data):
     resp = app_client.post(f"/classes/{seed_data['past_class_id']}/reminders", headers=get_admin_auth_header(app_client),)
     assert resp.status_code == HTTPStatus.NOT_ACCEPTABLE
     assert resp.json == {MSG: "Reminders can only be sent for upcoming classes"}
+
+def test_send_reminders_multi_channel_all_succeed(app_client, seed_data):
+    with patch("app.services.email.send_reminder_email", return_value=True), \
+         patch("app.services.telegram.send_reminder_telegram", return_value=True):
+        resp = app_client.post(
+            f"/classes/{seed_data['class3_id']}/reminders",
+            headers=get_admin_auth_header(app_client),
+        )
+        assert resp.status_code == HTTPStatus.OK
+        assert resp.json == {MSG: "Notifications sent: 4, Failed: 2."}
+ 
+def test_send_reminders_multi_channel_telegram_fails(app_client, seed_data):
+    with patch("app.services.email.send_reminder_email", return_value=True), \
+         patch("app.services.telegram.send_reminder_telegram", return_value=False):
+        resp = app_client.post(
+            f"/classes/{seed_data['class3_id']}/reminders",
+            headers=get_admin_auth_header(app_client),
+        )
+        assert resp.status_code == HTTPStatus.OK
+        assert resp.json == {MSG: "Notifications sent: 2, Failed: 4."}
  
 # GET /notifications/preferences
  
 def test_get_preferences(app_client):
     #Newly registered member defaults to email only
-    resp = app_client.get("/notifications/preferences", headers=get_member_auth_header(app_client))
+    headers = get_member_auth_header(app_client)
+    resp = app_client.get("/notifications/preferences", headers=headers)
     assert resp.status_code == HTTPStatus.OK
-    prefs = resp.json[MSG]
-    assert "email" in prefs
+    data = resp.json[MSG]
+    assert "email" in data["channels"]
+    assert data["telegram_linked"] == False
 
 # PUT /notifications/preferences
  
 def test_update_preferences(app_client):
     resp = app_client.put(
         "/notifications/preferences",
-        json={"notification_prefs": {"email": "user@example.com", "telegram": "987654321"}},
+        json={"notification_prefs": ["email", "telegram"]},
         headers=get_member_auth_header(app_client),
     )
     assert resp.status_code == HTTPStatus.OK
  
- 
 def test_update_preferences_invalid_channel(app_client):
     resp = app_client.put(
         "/notifications/preferences",
-        json={"notification_prefs": {"fax": "123"}},
+        json={"notification_prefs": ["fax"]},
         headers=get_member_auth_header(app_client),
     )
     assert resp.status_code == HTTPStatus.NOT_ACCEPTABLE
- 
- 
-def test_update_preferences_empty_contact_detail(app_client):
-    resp = app_client.put(
-        "/notifications/preferences",
-        json={"notification_prefs": {"email": ""}},
-        headers=get_member_auth_header(app_client),
-    )
-    assert resp.status_code == HTTPStatus.NOT_ACCEPTABLE
-
-def test_update_preferences_missing_prefs_key(app_client):
-    resp = app_client.put("/notifications/preferences", json={}, headers=get_member_auth_header(app_client))
-    assert resp.status_code == HTTPStatus.NOT_ACCEPTABLE
- 
+  
 # send_reminder_email tests
 
 def test_send_reminder_email_success():
@@ -326,48 +357,190 @@ def test_send_reminder_telegram_exception_failure():
 def test_email_notifier_success():
     with patch("app.services.email.send_reminder_email", return_value=True):
         notifier = EmailNotifier()
-        assert notifier.send(get_reminder_data(), {"email": "test@example.com"}) == True
+        assert notifier.send(get_reminder_data()) == True
 
 def test_email_notifier_failure():
     with patch("app.services.email.send_reminder_email", return_value=False):
         notifier = EmailNotifier()
-        assert notifier.send(get_reminder_data(), {"email": "test@example.com"}) == False
+        assert notifier.send(get_reminder_data()) == False
 
 def test_email_notifier_empty_email():
     notifier = EmailNotifier()
-    assert notifier.send(get_reminder_data(), {"email": ""}) == False
+    reminder = get_reminder_data()
+    reminder.email = ""
+    assert notifier.send(reminder) == False
  
 def test_email_notifier_no_email_key():
     notifier = EmailNotifier()
-    assert notifier.send(get_reminder_data(), {}) == False
- 
+    reminder = get_reminder_data()
+    reminder.email = None
+    assert notifier.send(reminder) == False
+
 def test_email_notifier_exception():
     with patch("app.services.email.send_reminder_email", side_effect=Exception("SES down")):
         notifier = EmailNotifier()
-        assert notifier.send(get_reminder_data(), {"email": "test@example.com"}) == False
+        assert notifier.send(get_reminder_data()) == False
 
 # TelegramNotifier tests
 
 def test_telegram_notifier_success():
     with patch("app.services.telegram.send_reminder_telegram", return_value=True):
         notifier = TelegramNotifier()
-        assert notifier.send(get_reminder_data(), {"telegram": "123456"}) == True
+        assert notifier.send(get_reminder_data()) == True
 
 def test_telegram_notifier_failure():
     with patch("app.services.telegram.send_reminder_telegram", return_value=False):
         notifier = TelegramNotifier()
-        assert notifier.send(get_reminder_data(), {"telegram": "123456"}) == False
+        assert notifier.send(get_reminder_data()) == False
 
+def test_telegram_notifier_no_chat_id():
+    notifier = TelegramNotifier()
+    reminder = get_reminder_data()
+    reminder.telegram_chat_id = None
+    assert notifier.send(reminder) == False
+ 
 def test_telegram_notifier_empty_chat_id():
     notifier = TelegramNotifier()
-    assert notifier.send(get_reminder_data(), {"chat_id": ""}) == False
- 
-def test_telegram_notifier_no_telegram_key():
-    notifier = TelegramNotifier()
-    assert notifier.send(get_reminder_data(), {}) == False
- 
+    reminder = get_reminder_data()
+    reminder.telegram_chat_id = ""
+    assert notifier.send(reminder) == False
+  
 def test_telegram_notifier_exception():
     with patch("app.services.telegram.send_reminder_telegram", side_effect=Exception("network error")):
         notifier = TelegramNotifier()
-        assert notifier.send(get_reminder_data(), {"telegram": "123456"}) == False
+        assert notifier.send(get_reminder_data()) == False
 
+# Telegram bot polling tests
+
+def test_telegram_bot_valid_phone_links_chat_id(app_client, seed_data):
+    from app.services.telegram_bot import handle_updates
+    with patch("app.services.telegram_bot.send_message"):
+        updates = [{
+            "update_id": 1,
+            "message": {"chat": {"id": 999888}, "text": seed_data["member3_phone"]}
+        }]
+        handle_updates(updates)
+        users = DB.get_collection("users")
+        user = users.find_one({"phone": seed_data["member3_phone"]})
+        assert user["telegram_chat_id"] == "999888"
+
+def test_telegram_bot_invalid_phone(app_client):
+    from app.services.telegram_bot import handle_updates
+    with patch("app.services.telegram_bot.send_message") as mock_send:
+        updates = [{
+            "update_id": 2,
+            "message": {"chat": {"id": 111}, "text": "+00000000000"}
+        }]
+        handle_updates(updates)
+        mock_send.assert_called_once()
+        args = mock_send.call_args[0]
+        assert "not found" in args[1].lower()
+ 
+ 
+def test_telegram_bot_user_without_telegram_pref(app_client, seed_data):
+    from app.services.telegram_bot import handle_updates
+    # member1 has notification_prefs: ["email"] only
+    users = DB.get_collection("users")
+    member1 = users.find_one({"phone": "+97150000000"})
+    with patch("app.services.telegram_bot.send_message") as mock_send:
+        updates = [{
+            "update_id": 3,
+            "message": {"chat": {"id": 222}, "text": "+97150000000"}
+        }]
+        handle_updates(updates)
+        mock_send.assert_called_once()
+        args = mock_send.call_args[0]
+        assert "not enabled" in args[1].lower()
+ 
+ 
+def test_telegram_bot_no_message_in_update():
+    from app.services.telegram_bot import handle_updates
+    updates = [{"update_id": 4}] 
+    handle_updates(updates)  
+ 
+def test_get_updates_success():
+    from app.services.telegram_bot import get_updates
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"result": [{"update_id": 1}]}
+    with patch("app.services.telegram_bot.requests.get", return_value=mock_response):
+        result = get_updates()
+        assert result == [{"update_id": 1}]
+
+def test_get_updates_with_offset():
+    from app.services.telegram_bot import get_updates
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"result": []}
+    with patch("app.services.telegram_bot.requests.get", return_value=mock_response) as mock_get:
+        get_updates(offset=5)
+        params = mock_get.call_args[1]["params"]
+        assert params["offset"] == 5
+
+def test_get_updates_exception():
+    from app.services.telegram_bot import get_updates
+    with patch("app.services.telegram_bot.requests.get", side_effect=Exception("timeout")):
+        result = get_updates()
+        assert result == []
+
+def test_send_message_success():
+    from app.services.telegram_bot import send_message
+    with patch("app.services.telegram_bot.requests.post") as mock_post:
+        send_message("123", "hello")
+        mock_post.assert_called_once()
+
+def test_send_message_exception():
+    from app.services.telegram_bot import send_message
+    with patch("app.services.telegram_bot.requests.post", side_effect=Exception("network error")):
+        send_message("123", "hello")  # should not raise
+
+def test_start_polling_starts_thread():
+    from app.services.telegram_bot import start_polling
+    with patch("app.services.telegram_bot.threading.Thread") as mock_thread:
+        mock_instance = MagicMock()
+        mock_thread.return_value = mock_instance
+        start_polling()
+        mock_thread.assert_called_once()
+        mock_instance.start.assert_called_once()
+
+def test_poll_calls_handle_updates():
+    from app.services.telegram_bot import poll
+    call_count = {"n": 0}
+    def fake_get_updates(offset=None):
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            return [{"update_id": 10, "message": {"chat": {"id": 1}, "text": "hi"}}]
+        raise Exception("stop")
+    with patch("app.services.telegram_bot.get_updates", side_effect=fake_get_updates), \
+         patch("app.services.telegram_bot.handle_updates") as mock_handle:
+        try:
+            poll()
+        except Exception:
+            pass
+        mock_handle.assert_called_once()
+ 
+# Notification Service
+
+def test_notification_service_email_only():
+    with patch("app.services.email.send_reminder_email", return_value=True):
+        service = NotificationService()
+        sent, failed = service.notify(get_reminder_data(), ["email"])
+        assert sent == 1 and failed == 0
+ 
+ 
+def test_notification_service_telegram_only():
+    with patch("app.services.telegram.send_reminder_telegram", return_value=True):
+        service = NotificationService()
+        sent, failed = service.notify(get_reminder_data(), ["telegram"])
+        assert sent == 1 and failed == 0
+ 
+def test_notification_service_both_succeed():
+    with patch("app.services.email.send_reminder_email", return_value=True), \
+         patch("app.services.telegram.send_reminder_telegram", return_value=True):
+        service = NotificationService()
+        sent, failed = service.notify(get_reminder_data(), ["email", "telegram"])
+        assert sent == 2 and failed == 0
+ 
+def test_notification_service_empty_prefs():
+    service = NotificationService()
+    sent, failed = service.notify(get_reminder_data(), [])
+    assert sent == 0 and failed == 0
+ 

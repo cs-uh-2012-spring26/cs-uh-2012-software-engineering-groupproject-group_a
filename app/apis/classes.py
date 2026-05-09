@@ -2,7 +2,7 @@ from flask_restx import Namespace, Resource, fields
 from app.apis import MSG
 from app.db.classes import ClassResource
 from app.db.constants import class_name, start_time, end_time, location, capacity, remaining_spots, trainer_name
-from app.db.users import UserResource, ROLE, USERNAME, EMAIL, PHONE, NOTIFICATION_PREFS
+from app.db.users import UserResource, ROLE, USERNAME, EMAIL, PHONE, NOTIFICATION_PREFS, TELEGRAM_CHAT_ID
 from app.db.bookings import BookingResource, USER_ID
 from app.services.notifications import NotificationService, ReminderData
 from app.services.classes import user_has_management_access, create_class_with_validation, validate_class, create_recurring_classes_with_validation, is_class_in_future
@@ -336,12 +336,14 @@ class SendReminders(Resource):
     total_failed = 0
 
     for member in members:
-        prefs = member.get(NOTIFICATION_PREFS) or {}
+        prefs = member.get(NOTIFICATION_PREFS) or []
         reminder = ReminderData(
             recipient_name=member.get(USERNAME, "Member"),
             class_name=cls.get(class_name, ""),
             start_time=cls.get(start_time, ""),
             location=cls.get(location, ""),
+            email=member.get(EMAIL),
+            telegram_chat_id=member.get(TELEGRAM_CHAT_ID),
         )
         sent, failed = notification_service.notify(reminder, prefs)
         total_sent += sent
