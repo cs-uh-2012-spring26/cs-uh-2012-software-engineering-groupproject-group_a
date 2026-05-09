@@ -147,7 +147,7 @@ def test_create_recurring_class_requires_recurrence_end_date(app_client):
   class_payload["recurrence_type"] = "daily"
   class_payload.pop("recurrence_end_date", None)
 
-  response = app_client.post("/classes/", class_payload)
+  response = create_class(app_client, class_payload)
 
   assert response.status_code == HTTPStatus.NOT_ACCEPTABLE
   assert response.json == {MSG: "recurrence_end_date is required when recurrence_type is provided"}
