@@ -84,7 +84,7 @@ class NotificationPreferences(Resource):
 
         if "telegram" in prefs:
             return {
-                MSG: "Preferences updated. To activate Telegram notifications, message your registered phone number to @FitnessClassBot on Telegram."
+                MSG: "Preferences updated. To activate Telegram notifications, message your registered phone number to @FitnessClassReminder_bot on Telegram."
             }, HTTPStatus.OK
         
         return {MSG: "Notification preferences updated successfully"}, HTTPStatus.OK
