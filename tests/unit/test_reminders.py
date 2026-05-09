@@ -458,7 +458,64 @@ def test_telegram_bot_no_message_in_update():
     updates = [{"update_id": 4}] 
     handle_updates(updates)  
  
- 
+def test_get_updates_success():
+    from app.services.telegram_bot import get_updates
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"result": [{"update_id": 1}]}
+    with patch("app.services.telegram_bot.requests.get", return_value=mock_response):
+        result = get_updates()
+        assert result == [{"update_id": 1}]
+
+def test_get_updates_with_offset():
+    from app.services.telegram_bot import get_updates
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"result": []}
+    with patch("app.services.telegram_bot.requests.get", return_value=mock_response) as mock_get:
+        get_updates(offset=5)
+        params = mock_get.call_args[1]["params"]
+        assert params["offset"] == 5
+
+def test_get_updates_exception():
+    from app.services.telegram_bot import get_updates
+    with patch("app.services.telegram_bot.requests.get", side_effect=Exception("timeout")):
+        result = get_updates()
+        assert result == []
+
+def test_send_message_success():
+    from app.services.telegram_bot import send_message
+    with patch("app.services.telegram_bot.requests.post") as mock_post:
+        send_message("123", "hello")
+        mock_post.assert_called_once()
+
+def test_send_message_exception():
+    from app.services.telegram_bot import send_message
+    with patch("app.services.telegram_bot.requests.post", side_effect=Exception("network error")):
+        send_message("123", "hello")  # should not raise
+
+def test_start_polling_starts_thread():
+    from app.services.telegram_bot import start_polling
+    with patch("app.services.telegram_bot.threading.Thread") as mock_thread:
+        mock_instance = MagicMock()
+        mock_thread.return_value = mock_instance
+        start_polling()
+        mock_thread.assert_called_once()
+        mock_instance.start.assert_called_once()
+
+def test_poll_calls_handle_updates():
+    from app.services.telegram_bot import poll
+    call_count = {"n": 0}
+    def fake_get_updates(offset=None):
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            return [{"update_id": 10, "message": {"chat": {"id": 1}, "text": "hi"}}]
+        raise Exception("stop")
+    with patch("app.services.telegram_bot.get_updates", side_effect=fake_get_updates), \
+         patch("app.services.telegram_bot.handle_updates") as mock_handle:
+        try:
+            poll()
+        except Exception:
+            pass
+        mock_handle.assert_called_once()
  
 # Notification Service
 
