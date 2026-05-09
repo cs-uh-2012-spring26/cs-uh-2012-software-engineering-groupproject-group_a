@@ -21,7 +21,7 @@ def get_class_members(class_id):
             USERNAME: member.get(USERNAME),
             EMAIL: member.get(EMAIL),
             PHONE: member.get(PHONE),
-            NOTIFICATION_PREFS: member.get(NOTIFICATION_PREFS) OR ["email"],
+            NOTIFICATION_PREFS: member.get(NOTIFICATION_PREFS),
             TELEGRAM_CHAT_ID: member.get(TELEGRAM_CHAT_ID),
         })
     return members

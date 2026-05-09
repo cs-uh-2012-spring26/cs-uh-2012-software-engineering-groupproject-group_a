@@ -43,7 +43,7 @@ def handle_updates(updates):
         if "telegram" not in prefs:
             send_message(chat_id, "You have not enabled Telegram notifications. Update your preferences first.")
             continue
-        user_res.save_telegram_chat_id(user["id"], chat_id)
+        user_res.save_telegram_chat_id(user["_id"], chat_id)
         send_message(chat_id, "You are now set up to receive Telegram notifications!")
  
  
@@ -59,4 +59,3 @@ def poll():
 def start_polling():
     thread = threading.Thread(target=poll, daemon=True)
     thread.start()
- 

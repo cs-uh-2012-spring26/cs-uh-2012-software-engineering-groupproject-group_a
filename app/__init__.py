@@ -14,6 +14,7 @@ from flask_restx import Api
 from flask_jwt_extended import JWTManager
 from flask_jwt_extended.exceptions import NoAuthorizationError
 from werkzeug.exceptions import BadRequest
+import os
 
 def create_app():
     app = Flask(__name__)
