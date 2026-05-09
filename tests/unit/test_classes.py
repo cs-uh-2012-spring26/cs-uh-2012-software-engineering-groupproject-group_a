@@ -147,7 +147,7 @@ def test_create_recurring_class_requires_recurrence_end_date(app_client):
   class_payload["recurrence_type"] = "daily"
   class_payload.pop("recurrence_end_date", None)
 
-  response = app_client.post("/classes/", json=class_payload)
+  response = app_client.post("/classes/", class_payload)
 
   assert response.status_code == HTTPStatus.NOT_ACCEPTABLE
   assert response.json == {MSG: "recurrence_end_date is required when recurrence_type is provided"}
@@ -160,7 +160,7 @@ def test_create_class_with_invalid_datetime_format_fails(app_client):
   response = create_class(app_client, class_payload)
 
   assert response.status_code == HTTPStatus.NOT_ACCEPTABLE
-  assert response.json == {MSG: "Start time and end time must be in the format YYYY-MM-DDTHH:MM:SS (e.g. 2026-03-02T08:30:00)"}
+  assert response.json == {MSG: "Start time and end time must be in the format YYYY-MM-DDTHH:MM:SS (e.g. 2026-06-02T08:30:00)"}
 
 def test_create_class_without_auth_fails(app_client):
   class_payload = build_valid_class()
