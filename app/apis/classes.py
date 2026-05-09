@@ -95,7 +95,7 @@ class_create_fields = api.model(
     RECURRING_END_DATE_FIELD: fields.String(
         required=False,
         example="2026-03-16T08:30:00",
-        description="Last date to generate recurring classes (ISO format).",
+        description="Date of last class in the recurrence series (ISO format).",
     ),
   },
 )
@@ -112,7 +112,7 @@ class_list_fields = api.model(
 )
 @api.route("/")
 class ClassList(Resource):
-  #Fetches list of upcoming fitness classes, endpoint used by guests, members, trainers and admins, returns all classes scheduled within upcoming 2 weeks, inlcudes full classes
+  #Fetches list of upcoming fitness classes, endpoint used by guests, members, trainers and admins, returns all classes scheduled within configured window, inlcudes full classes
   @api.response(
       HTTPStatus.OK,
       "Success",
