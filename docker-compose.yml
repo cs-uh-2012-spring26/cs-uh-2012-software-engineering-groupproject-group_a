@@ -17,6 +17,7 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
     depends_on:
       - mongo
+    restart: always
 
   mongo:
     image: mongo:latest
@@ -25,3 +26,4 @@ services:
       - "27017:27017"
     environment:
       - MONGO_INITDB_DATABASE=${DB_NAME}
+    restart: always
