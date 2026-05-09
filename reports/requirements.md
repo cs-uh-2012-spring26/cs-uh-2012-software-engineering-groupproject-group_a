@@ -209,3 +209,13 @@ two new planned features. The following are corrections made to Sprint 2 deliver
 - Refactored authentication to reflect Sprint 2 feedback by clarifying email‑based login and separating member vs. trainer registration in the design and documentation
 
 
+## Sprint 3B → Sprint 4 Updates
+> Sprint 4 focused on containerization, continuous deployment, and addressing feedback from Sprint 3B. The following are corrections and improvements made to Sprint 3B deliverables:
+
+- Removed the two-week creation limit for classes to address Sprint 3B feedback, classes can now be created for any future date
+   - Note: the GET endpoint still displays classes within the upcoming two weeks, classes created beyond this window are successfully created but will not appear in the listing
+- Fixed the Telegram notification workflow to remove the requirement for users to manually find and submit their chat ID. Users now link their Telegram account by messaging the bot their registered phone number, which automatically maps their chat ID
+- Containerized the application using Docker and Docker Compose
+- Set up continuous deployment workflow that triggers only when CI passes
+- Deployed the application to a DigitalOcean VM accessible at http://192.34.57.23:8000
+
