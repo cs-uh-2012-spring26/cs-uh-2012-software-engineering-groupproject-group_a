@@ -95,7 +95,7 @@ class_create_fields = api.model(
     RECURRING_END_DATE_FIELD: fields.String(
         required=False,
         example="2026-03-16T08:30:00",
-        description="Last date to generate recurring classes (ISO format).",
+        description="Date of last class in the recurrence series (ISO format).",
     ),
   },
 )
@@ -112,7 +112,7 @@ class_list_fields = api.model(
 )
 @api.route("/")
 class ClassList(Resource):
-  #Fetches list of upcoming fitness classes, endpoint used by guests, members, trainers and admins, returns all classes scheduled within upcoming 2 weeks, inlcudes full classes
+  #Fetches list of upcoming fitness classes, endpoint used by guests, members, trainers and admins. Includes full classes
   @api.response(
       HTTPStatus.OK,
       "Success",
@@ -129,7 +129,7 @@ class ClassList(Resource):
       return {MSG: "No upcoming classes available"}, HTTPStatus.OK
     return {MSG: weekly_classes}, HTTPStatus.OK
   
-  #Creates a new fitness class, endpoint used by trainers and admins, validates inputs and applies upcoming 2 weeks rule
+  #Creates a new fitness class, endpoint used by trainers and admins. Validates schedule conflicts and future start times.
   @jwt_required()
   @api.expect(class_create_fields)
   @api.response(
@@ -159,13 +159,30 @@ class ClassList(Resource):
 
   @api.doc(
     description="""
-    Create a single fitness class or a recurring class series.
+    This endpoints allows for both single class creation and recurring classes creation.
 
-    Optional recurrence fields:
-    - recurrence_type: "daily" or "weekly"
-    - recurrence_end_date: ISO datetime of the last occurrence
+    Single class:
+    Omit last 2 recurrence fields and trailing comma `,`.
 
-    Remove recurrence_type and recurrence_end_date lines to create a single class.
+    Daily recurring series example for 3 days:
+    ```json
+    {
+      "class_name": "Morning Yoga",
+      "start_time": "2026-06-10T07:00:00",
+      "end_time": "2026-06-10T08:00:00",
+      "location": "Studio B",
+      "capacity": 12,
+      "trainer_name": "John Doe",
+      "recurrence_type": "daily",
+      "recurrence_end_date": "2026-06-12T08:00:00"
+    }
+    ```
+
+    Notes:
+    - `start_time`/`end_time` = class times of first class in the series
+    - `recurrence_end_date` = last day of class in the series (required with recurrence_type)
+    - Classes must start in future, no schedule overlaps
+    - Returns single class ID or list of IDs
     """
   )
   def post(self):

@@ -124,7 +124,7 @@ def test_create_class_with_start_time_in_past_fails(app_client):
   response = create_class(app_client, class_payload)
 
   assert response.status_code == HTTPStatus.NOT_ACCEPTABLE
-  assert response.json == {MSG:"Classes can only be created for upcoming 2 weeks"}
+  assert response.json == {MSG:"Start time must be in the future"}
 
 def test_create_class_with_equal_start_time_and_end_time_fails(app_client):
   #Validation failed; end_time must strictly be after start_time, not equal to it
@@ -142,20 +142,15 @@ def test_create_class_with_equal_start_time_and_end_time_fails(app_client):
   assert response.status_code == HTTPStatus.NOT_ACCEPTABLE
   assert response.json == {MSG:"End time must be after start time"}
 
-
-def test_create_class_outside_upcoming_two_weeks_fails(app_client):
+def test_create_recurring_class_requires_recurrence_end_date(app_client):
   class_payload = build_valid_class()
-
-  class_start_time = datetime.now() + timedelta(days = 25) #outside of allowed 2 weeks window
-  class_end_time = class_start_time +timedelta(hours = 1) #end time remains valid
-
-  class_payload["start_time"] = class_start_time.isoformat(timespec= "seconds")
-  class_payload["end_time"] = class_end_time.isoformat(timespec= "seconds")
+  class_payload["recurrence_type"] = "daily"
+  class_payload.pop("recurrence_end_date", None)
 
   response = create_class(app_client, class_payload)
 
   assert response.status_code == HTTPStatus.NOT_ACCEPTABLE
-  assert response.json == {MSG:"Classes can only be created for upcoming 2 weeks"}
+  assert response.json == {MSG: "recurrence_end_date is required when recurrence_type is provided"}
 
 def test_create_class_with_invalid_datetime_format_fails(app_client):
   class_payload = build_valid_class()
@@ -165,7 +160,7 @@ def test_create_class_with_invalid_datetime_format_fails(app_client):
   response = create_class(app_client, class_payload)
 
   assert response.status_code == HTTPStatus.NOT_ACCEPTABLE
-  assert response.json == {MSG: "Start time and end time must be in the format YYYY-MM-DDTHH:MM:SS (e.g. 2026-03-02T08:30:00)"}
+  assert response.json == {MSG: "Start time and end time must be in the format YYYY-MM-DDTHH:MM:SS (e.g. 2026-06-02T08:30:00)"}
 
 def test_create_class_without_auth_fails(app_client):
   class_payload = build_valid_class()

@@ -4,9 +4,8 @@ from datetime import datetime, timedelta
 from app.db.constants import class_name, start_time, end_time, location, capacity, trainer_name
 from app.services.recurrence import RecurrenceStrategy, DailyRecurrenceStrategy, WeeklyRecurrenceStrategy
 
-CLASS_WINDOW_DAYS = 14
-DATETIME_FORMAT_ERROR = "Start time and end time must be in the format YYYY-MM-DDTHH:MM:SS (e.g. 2026-03-02T08:30:00)"
-CLASS_WINDOW_ERROR = "Classes can only be created for upcoming 2 weeks"
+DATETIME_FORMAT_ERROR = "Start time and end time must be in the format YYYY-MM-DDTHH:MM:SS (e.g. 2026-06-02T08:30:00)"
+START_TIME_ERROR = "Start time must be in the future"
 CLASS_END_TIME_ERROR = "End time must be after start time"
 CLASS_OVERLAP_ERROR = "Another class is already scheduled at this location during that time"
 
@@ -15,6 +14,7 @@ RECURRING_END_DATE_FIELD = "recurrence_end_date"
 
 RECURRING_TYPE_ERROR = "Unsupported recurrence_type. Supported: daily, weekly"
 RECURRING_END_DATE_ERROR = "recurrence_end_date must be a valid ISO datetime and not before start_time"
+RECURRING_END_DATE_REQUIRED_ERROR = "recurrence_end_date is required when recurrence_type is provided"
 
 def user_has_management_access(user_id):
   user_res = UserResource()
@@ -34,12 +34,10 @@ def parse_class_datetimes(class_data):
     return None
 
 def validate_class_schedule(start_datetime, end_datetime):
-  now = datetime.now() #current local time
-  latest_allowed = now+timedelta(days=CLASS_WINDOW_DAYS) #latest start date permitted
-  if start_datetime<now or start_datetime>latest_allowed:
-    return CLASS_WINDOW_ERROR
-  #end time must be after start time; class cannot start and end at same time
-  if end_datetime<=start_datetime:
+  now = datetime.now()
+  if start_datetime < now:
+    return START_TIME_ERROR
+  if end_datetime<=start_datetime:   #end time must be after start time; class cannot start and end at same time
     return CLASS_END_TIME_ERROR
   return None 
 
@@ -55,8 +53,7 @@ def resolve_recurrence_strategy(recurrence_type: str) -> RecurrenceStrategy | No
 def parse_series_end_date(class_data, first_start: datetime):
     end_date_str = class_data.get(RECURRING_END_DATE_FIELD)
     if not end_date_str:
-        #default: up to CLASS_WINDOW_DAYS from first_start
-        return first_start + timedelta(days=CLASS_WINDOW_DAYS)
+        return "required"
 
     try:
         series_end = datetime.fromisoformat(end_date_str)
@@ -121,6 +118,8 @@ def create_recurring_classes_with_validation(class_data):
       return None, schedule_error
 
   recurrence_end = parse_series_end_date(class_data, first_start)
+  if recurrence_end == "required":
+    return None, RECURRING_END_DATE_REQUIRED_ERROR
   if recurrence_end is None:
       return None, RECURRING_END_DATE_ERROR
 
